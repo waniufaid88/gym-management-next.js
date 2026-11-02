@@ -51,7 +51,7 @@ export async function POST(request: Request) {
     const refreshToken = jwt.sign({ id: user.id }, REFRESH_SECRET, {
       expiresIn: "7d",
     });
-    
+
     const response = NextResponse.json(
       { message: "User registered successfully", user },
       { status: 201 },

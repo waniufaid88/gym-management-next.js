@@ -11,6 +11,7 @@ const REFRESH_SECRET = process.env.REFRESH_TOKEN_SECRET || "refreshsecret";
 export async function POST(request: Request) {
   try {
     const { email, password } = await request.json();
+
     if (!email || !password) {
       return NextResponse.json(
         { message: "Email and password are required" },
@@ -19,6 +20,7 @@ export async function POST(request: Request) {
     }
 
     const [user] = await db.select().from(User).where(eq(User.email, email));
+
     if (!user || !(await bcrypt.compare(password, user.password))) {
       return NextResponse.json(
         { message: "Invalid email or password" },
@@ -32,7 +34,7 @@ export async function POST(request: Request) {
     const refreshToken = jwt.sign({ id: user.id }, REFRESH_SECRET, {
       expiresIn: "7d",
     });
-    
+
     const response = NextResponse.json({
       message: "Login successful",
       user: { id: user.id, name: user.name, email: user.email },
@@ -52,7 +54,7 @@ export async function POST(request: Request) {
       path: "/",
       maxAge: 7 * 24 * 60 * 60,
     });
-    
+
     return response;
   } catch (error) {
     console.log(error);

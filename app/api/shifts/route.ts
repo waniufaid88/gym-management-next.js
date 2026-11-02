@@ -8,6 +8,9 @@ export async function GET() {
     return NextResponse.json(shifts);
   } catch (error) {
     console.error("Could not load shifts:", error);
-    return NextResponse.json({ message: "Could not load shifts" }, { status: 500 });
+    return NextResponse.json(
+      { message: "Could not load shifts" },
+      { status: 500 },
+    );
   }
 }

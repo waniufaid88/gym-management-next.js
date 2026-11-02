@@ -8,7 +8,7 @@ export default function Home() {
         aria-hidden="true"
         className="pointer-events-none absolute -right-24 -top-28 size-[28rem] rounded-full bg-lime-400/10 blur-3xl"
       />
-      <section className="relative mx-auto w-full max-w-5xl">
+      {/* <section className="relative mx-auto w-full max-w-5xl">
         <nav className="mb-24 flex items-center justify-between">
           <Link href="/" className="text-lg font-black tracking-tight">
             GMS<span className="text-lime-400">.</span>
@@ -54,7 +54,7 @@ export default function Home() {
             </Button>
           </div>
         </div>
-      </section>
+      </section> */}
     </main>
   );
 }

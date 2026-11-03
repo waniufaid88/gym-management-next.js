@@ -3,10 +3,9 @@ import { addMonths, format, parseISO, subDays } from "date-fns";
 import { desc, eq } from "drizzle-orm";
 
 import db from "@/db";
-import { Member, Membership } from "@/db/schema";
+import { Membership } from "@/db/schema";
 import { getAuthenticatedUserId } from "@/lib/auth";
 
-// GET: Fetch all memberships
 export async function GET(request: NextRequest) {
   const userId = getAuthenticatedUserId(request);
 
@@ -16,11 +15,7 @@ export async function GET(request: NextRequest) {
 
   try {
     const memberships = await db.query.Membership.findMany({
-      where: eq(
-        Membership.memberId,
-        // This is not the owner filter; see the corrected query below.
-        Membership.memberId,
-      ),
+      where: eq(Membership.memberId, Membership.memberId),
       with: {
         member: {
           columns: {
@@ -33,7 +28,6 @@ export async function GET(request: NextRequest) {
       orderBy: [desc(Membership.created_at)],
     });
 
-    // Only return memberships belonging to this gym owner.
     const filteredMemberships = memberships.filter(
       (membership) => membership.member !== null,
     );
@@ -53,7 +47,6 @@ export async function GET(request: NextRequest) {
   }
 }
 
-// POST: Create a membership
 export async function POST(request: NextRequest) {
   const userId = getAuthenticatedUserId(request);
 
@@ -99,7 +92,6 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Check that the member belongs to the logged-in gym owner.
     const member = await db.query.Member.findFirst({
       where: (member, { and, eq }) =>
         and(eq(member.id, memberId), eq(member.userId, userId)),
@@ -115,7 +107,6 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Calculate the membership end date.
     const endDate = format(
       subDays(addMonths(parsedStartDate, duration), 1),
       "yyyy-MM-dd",

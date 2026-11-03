@@ -28,7 +28,7 @@ import LogoutButton from "@/components/logout-button";
 const links = [
   { title: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
   { title: "Members", href: "/members", icon: Users },
-  { title: "Memberships", href: "/memberships", icon: CalendarDays },
+  { title: "Membership", href: "/membership", icon: CalendarDays },
   { title: "Shifts", href: "/shifts", icon: Timer },
   { title: "Payments", href: "/payments", icon: CreditCard },
   { title: "History", href: "/history", icon: History },

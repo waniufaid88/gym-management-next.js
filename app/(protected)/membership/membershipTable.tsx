@@ -1,19 +1,28 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import {
   addDays,
   differenceInCalendarMonths,
   format,
   parseISO,
 } from "date-fns";
-import { Search } from "lucide-react";
+import { Pencil, Trash2 } from "lucide-react";
 import { toast } from "react-hot-toast";
 
-import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 import {
   Table,
   TableBody,
@@ -48,13 +57,8 @@ function getMembershipStatus(
 ): MembershipStatus {
   const today = format(new Date(), "yyyy-MM-dd");
 
-  if (startDate > today) {
-    return "upcoming";
-  }
-
-  if (endDate < today) {
-    return "expired";
-  }
+  if (startDate > today) return "upcoming";
+  if (endDate < today) return "expired";
 
   return "active";
 }
@@ -80,10 +84,13 @@ function getDuration(startDate: string, endDate: string) {
 
 export default function MembershipTable() {
   const [memberships, setMemberships] = useState<Membership[]>([]);
-  const [searchValue, setSearchValue] = useState("");
   const [loading, setLoading] = useState(true);
+  const [editingMembership, setEditingMembership] = useState<Membership | null>(
+    null,
+  );
+  const [deletingId, setDeletingId] = useState<string | null>(null);
 
-  const fetchMemberships = useCallback(async () => {
+  async function fetchMemberships() {
     try {
       setLoading(true);
 
@@ -106,40 +113,54 @@ export default function MembershipTable() {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }
 
   useEffect(() => {
     fetchMemberships();
-  }, [fetchMemberships]);
+  }, []);
 
-  const filteredMemberships = memberships.filter((membership) => {
-    const search = searchValue.toLowerCase();
+  async function deleteMembership(id: string) {
+    try {
+      setDeletingId(id);
 
-    return (
-      membership.member?.name.toLowerCase().includes(search) ||
-      membership.member?.phone.includes(search)
-    );
-  });
+      const response = await fetch(`/api/memberships/${id}`, {
+        method: "DELETE",
+        credentials: "include",
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.message || "Could not delete membership");
+      }
+
+      setMemberships((prev) =>
+        prev.filter((membership) => membership.id !== id),
+      );
+
+      toast.success(data.message || "Membership deleted successfully");
+    } catch (error) {
+      toast.error(
+        error instanceof Error ? error.message : "Could not delete membership",
+      );
+    } finally {
+      setDeletingId(null);
+    }
+  }
 
   return (
     <div className="space-y-4">
-      {/* Search and Add Membership */}
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <div className="relative w-full sm:max-w-sm">
-          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-
-          <Input
-            placeholder="Search by member name or phone"
-            value={searchValue}
-            onChange={(event) => setSearchValue(event.target.value)}
-            className="pl-9"
-          />
+      <div className="flex flex-col justify-between gap-3 sm:flex-row sm:items-center">
+        <div>
+          <h1 className="text-2xl font-bold tracking-tight">Memberships</h1>
+          <p className="text-sm text-muted-foreground">
+            Manage gym memberships and track their validity.
+          </p>
         </div>
 
         <MembershipDialog onSuccess={fetchMemberships} />
       </div>
 
-      {/* Membership Table */}
       <div className="overflow-hidden rounded-md border">
         <Table>
           <TableHeader>
@@ -152,40 +173,30 @@ export default function MembershipTable() {
               <TableHead>Monthly Fee</TableHead>
               <TableHead>Total Fee</TableHead>
               <TableHead>Status</TableHead>
+              <TableHead>Actions</TableHead>
             </TableRow>
           </TableHeader>
 
           <TableBody>
             {loading ? (
               <TableRow>
-                <TableCell
-                  colSpan={8}
-                  className="h-24 text-center text-muted-foreground"
-                >
+                <TableCell colSpan={9} className="h-24 text-center">
                   Loading memberships...
                 </TableCell>
               </TableRow>
-            ) : filteredMemberships.length === 0 ? (
+            ) : memberships.length === 0 ? (
               <TableRow>
-                <TableCell
-                  colSpan={8}
-                  className="h-24 text-center text-muted-foreground"
-                >
-                  {searchValue
-                    ? "No memberships found."
-                    : "No memberships available. Add your first membership."}
+                <TableCell colSpan={9} className="h-24 text-center">
+                  No memberships available. Add your first membership.
                 </TableCell>
               </TableRow>
             ) : (
-              filteredMemberships.map((membership) => {
+              memberships.map((membership) => {
                 const duration = getDuration(
                   membership.startDate,
                   membership.endDate,
                 );
-
                 const monthlyFee = Number(membership.monthlyFee);
-                const totalFee = monthlyFee * duration;
-
                 const status = getMembershipStatus(
                   membership.startDate,
                   membership.endDate,
@@ -200,7 +211,6 @@ export default function MembershipTable() {
                     <TableCell>{membership.member?.phone ?? "-"}</TableCell>
 
                     <TableCell>{formatDate(membership.startDate)}</TableCell>
-
                     <TableCell>{formatDate(membership.endDate)}</TableCell>
 
                     <TableCell>
@@ -210,7 +220,7 @@ export default function MembershipTable() {
                     <TableCell>{formatCurrency(monthlyFee)}</TableCell>
 
                     <TableCell className="font-medium">
-                      {formatCurrency(totalFee)}
+                      {formatCurrency(monthlyFee * duration)}
                     </TableCell>
 
                     <TableCell>
@@ -227,6 +237,62 @@ export default function MembershipTable() {
                         {status.charAt(0).toUpperCase() + status.slice(1)}
                       </Badge>
                     </TableCell>
+
+                    <TableCell>
+                      <div className="flex items-center gap-2">
+                        <Button
+                          variant="outline"
+                          size="icon"
+                          title="Edit membership"
+                          onClick={() => setEditingMembership(membership)}
+                        >
+                          <Pencil className="h-4 w-4" />
+                        </Button>
+
+                        <AlertDialog>
+                          <AlertDialogTrigger
+                            render={
+                              <Button
+                                variant="outline"
+                                size="icon"
+                                title="Delete membership"
+                                disabled={deletingId === membership.id}
+                              >
+                                <Trash2 className="h-4 w-4 text-destructive" />
+                              </Button>
+                            }
+                          />
+
+                          <AlertDialogContent>
+                            <AlertDialogHeader>
+                              <AlertDialogTitle>
+                                Delete Membership?
+                              </AlertDialogTitle>
+
+                              <AlertDialogDescription>
+                                Are you sure you want to delete the membership
+                                for{" "}
+                                <span className="font-semibold">
+                                  {membership.member?.name}
+                                </span>
+                                ? This action cannot be undone.
+                              </AlertDialogDescription>
+                            </AlertDialogHeader>
+
+                            <AlertDialogFooter>
+                              <AlertDialogCancel>Cancel</AlertDialogCancel>
+
+                              <AlertDialogAction
+                                onClick={() => deleteMembership(membership.id)}
+                                className="bg-destructive text-white hover:bg-destructive/90"
+                              >
+                                Delete
+                              </AlertDialogAction>
+                            </AlertDialogFooter>
+                          </AlertDialogContent>
+                        </AlertDialog>
+                      </div>
+                    </TableCell>
                   </TableRow>
                 );
               })
@@ -235,16 +301,13 @@ export default function MembershipTable() {
         </Table>
       </div>
 
-      <div className="flex justify-end">
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={fetchMemberships}
-          disabled={loading}
-        >
-          Refresh
-        </Button>
-      </div>
+      {editingMembership && (
+        <MembershipDialog
+          membership={editingMembership}
+          onClose={() => setEditingMembership(null)}
+          onSuccess={fetchMemberships}
+        />
+      )}
     </div>
   );
 }

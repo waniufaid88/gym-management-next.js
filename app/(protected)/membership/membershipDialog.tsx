@@ -1,6 +1,12 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import {
+  addDays,
+  differenceInCalendarMonths,
+  format,
+  parseISO,
+} from "date-fns";
 import { z } from "zod";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -41,31 +47,89 @@ type GymMember = {
   phone: string;
 };
 
+type Membership = {
+  id: string;
+  memberId: string;
+  startDate: string;
+  endDate: string;
+  monthlyFee: string;
+  member: GymMember;
+};
+
 type MembershipDialogProps = {
-  onSuccess: () => void;
+  onSuccess: () => void | Promise<void>;
+  membership?: Membership | null;
+  onClose?: () => void;
 };
 
 const initialValues: MembershipFormValues = {
   memberId: "",
-  startDate: new Date().toISOString().split("T")[0],
+  startDate: format(new Date(), "yyyy-MM-dd"),
   durationMonths: "1",
   monthlyFee: 0,
 };
 
-export default function MembershipDialog({ onSuccess }: MembershipDialogProps) {
-  const [open, setOpen] = useState(false);
+function getDuration(startDate: string, endDate: string) {
+  return differenceInCalendarMonths(
+    addDays(parseISO(endDate), 1),
+    parseISO(startDate),
+  );
+}
+
+export default function MembershipDialog({
+  onSuccess,
+  membership,
+  onClose,
+}: MembershipDialogProps) {
+  const isEditing = Boolean(membership);
+
+  const [open, setOpen] = useState(isEditing);
   const [members, setMembers] = useState<GymMember[]>([]);
   const [loadingMembers, setLoadingMembers] = useState(false);
 
-  const form = useForm<MembershipFormValues>({
+  const {
+    register,
+    watch,
+    setValue,
+    reset,
+    handleSubmit,
+    formState: { errors, isSubmitting },
+  } = useForm<MembershipFormValues>({
     resolver: zodResolver(membershipSchema),
     defaultValues: initialValues,
   });
 
+  const selectedMemberId = watch("memberId");
+  const selectedDuration = watch("durationMonths");
+
+  const selectedMember = members.find(
+    (member) => member.id === selectedMemberId,
+  );
+
+  useEffect(() => {
+    if (membership) {
+      const duration = getDuration(membership.startDate, membership.endDate);
+
+      reset({
+        memberId: membership.memberId,
+        startDate: membership.startDate.slice(0, 10),
+        durationMonths: [1, 3, 6, 12].includes(duration)
+          ? (String(duration) as MembershipFormValues["durationMonths"])
+          : "1",
+        monthlyFee: Number(membership.monthlyFee),
+      });
+
+      setOpen(true);
+    } else {
+      reset(initialValues);
+      setOpen(false);
+    }
+  }, [membership, reset]);
+
   useEffect(() => {
     if (!open) return;
 
-    const fetchMembers = async () => {
+    async function fetchMembers() {
       try {
         setLoadingMembers(true);
 
@@ -90,80 +154,109 @@ export default function MembershipDialog({ onSuccess }: MembershipDialogProps) {
       } finally {
         setLoadingMembers(false);
       }
-    };
+    }
 
     fetchMembers();
   }, [open]);
 
   function handleOpenChange(value: boolean) {
+    if (isSubmitting) return;
+
     setOpen(value);
 
-    if (!value && !form.formState.isSubmitting) {
-      form.reset(initialValues);
+    if (!value) {
+      reset(initialValues);
+
+      if (isEditing) {
+        onClose?.();
+      }
     }
   }
 
   async function onSubmit(values: MembershipFormValues) {
     try {
-      const response = await fetch("/api/memberships", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
+      const response = await fetch(
+        isEditing ? `/api/memberships/${membership!.id}` : "/api/memberships",
+        {
+          method: isEditing ? "PATCH" : "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          credentials: "include",
+          body: JSON.stringify({
+            memberId: values.memberId,
+            startDate: values.startDate,
+            durationMonths: Number(values.durationMonths),
+            monthlyFee: values.monthlyFee,
+          }),
         },
-        credentials: "include",
-        body: JSON.stringify({
-          memberId: values.memberId,
-          startDate: values.startDate,
-          durationMonths: Number(values.durationMonths),
-          monthlyFee: values.monthlyFee,
-        }),
-      });
+      );
 
       const data = await response.json();
 
       if (!response.ok) {
-        throw new Error(data.message || "Could not create membership");
+        throw new Error(
+          data.message ||
+            `Could not ${isEditing ? "update" : "create"} membership`,
+        );
       }
 
-      toast.success(data.message || "Membership created successfully");
+      toast.success(
+        data.message ||
+          `Membership ${isEditing ? "updated" : "created"} successfully`,
+      );
 
-      form.reset(initialValues);
+      reset(initialValues);
       setOpen(false);
-      onSuccess();
+
+      if (isEditing) {
+        onClose?.();
+      }
+
+      await onSuccess();
     } catch (error) {
       toast.error(
-        error instanceof Error ? error.message : "Could not create membership",
+        error instanceof Error
+          ? error.message
+          : `Could not ${isEditing ? "update" : "create"} membership`,
       );
     }
   }
 
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
-      <DialogTrigger
-        render={
-          <Button>
-            <Plus className="mr-2 h-4 w-4" />
-            Add Membership
-          </Button>
-        }
-      />
+      {!isEditing && (
+        <DialogTrigger
+          render={
+            <Button>
+              <Plus className="mr-2 h-4 w-4" />
+              Add Membership
+            </Button>
+          }
+        />
+      )}
 
       <DialogContent className="sm:max-w-[500px]">
         <DialogHeader>
-          <DialogTitle>Add Membership</DialogTitle>
+          <DialogTitle>
+            {isEditing ? "Edit Membership" : "Add Membership"}
+          </DialogTitle>
+
           <DialogDescription>
-            Create a new membership for an existing gym member.
+            {isEditing
+              ? "Update the membership details."
+              : "Create a new membership for an existing gym member."}
           </DialogDescription>
         </DialogHeader>
 
-        <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-5">
+        <form onSubmit={handleSubmit(onSubmit)} className="space-y-5">
           <div className="space-y-2">
             <Label>Member</Label>
 
             <Select
-              value={form.watch("memberId")}
+              value={selectedMemberId}
               onValueChange={(value) => {
-                form.setValue("memberId", value ?? "", {
+                setValue("memberId", value ?? "", {
                   shouldValidate: true,
                   shouldDirty: true,
                 });
@@ -172,15 +265,9 @@ export default function MembershipDialog({ onSuccess }: MembershipDialogProps) {
             >
               <SelectTrigger className="w-full">
                 <SelectValue placeholder="Select a member">
-                  {(() => {
-                    const selectedMember = members.find(
-                      (member) => member.id === form.watch("memberId"),
-                    );
-
-                    return selectedMember
-                      ? `${selectedMember.name} - ${selectedMember.phone}`
-                      : "Select a member";
-                  })()}
+                  {selectedMember
+                    ? `${selectedMember.name} - ${selectedMember.phone}`
+                    : "Select a member"}
                 </SelectValue>
               </SelectTrigger>
 
@@ -193,9 +280,9 @@ export default function MembershipDialog({ onSuccess }: MembershipDialogProps) {
               </SelectContent>
             </Select>
 
-            {form.formState.errors.memberId && (
+            {errors.memberId && (
               <p className="text-sm text-destructive">
-                {form.formState.errors.memberId.message}
+                {errors.memberId.message}
               </p>
             )}
 
@@ -206,28 +293,26 @@ export default function MembershipDialog({ onSuccess }: MembershipDialogProps) {
             )}
           </div>
 
-          {/* Start Date */}
           <div className="space-y-2">
             <Label>Start Date</Label>
 
-            <Input type="date" {...form.register("startDate")} />
+            <Input type="date" {...register("startDate")} />
 
-            {form.formState.errors.startDate && (
+            {errors.startDate && (
               <p className="text-sm text-destructive">
-                {form.formState.errors.startDate.message}
+                {errors.startDate.message}
               </p>
             )}
           </div>
 
-          {/* Duration */}
           <div className="space-y-2">
             <Label>Membership Duration</Label>
 
             <Select
-              value={form.watch("durationMonths")}
+              value={selectedDuration}
               onValueChange={(value) => {
                 if (value) {
-                  form.setValue(
+                  setValue(
                     "durationMonths",
                     value as MembershipFormValues["durationMonths"],
                     {
@@ -250,14 +335,13 @@ export default function MembershipDialog({ onSuccess }: MembershipDialogProps) {
               </SelectContent>
             </Select>
 
-            {form.formState.errors.durationMonths && (
+            {errors.durationMonths && (
               <p className="text-sm text-destructive">
-                {form.formState.errors.durationMonths.message}
+                {errors.durationMonths.message}
               </p>
             )}
           </div>
 
-          {/* Monthly Fee */}
           <div className="space-y-2">
             <Label>Monthly Fee (₹)</Label>
 
@@ -266,40 +350,39 @@ export default function MembershipDialog({ onSuccess }: MembershipDialogProps) {
               min="0"
               step="0.01"
               placeholder="Enter monthly fee"
-              {...form.register("monthlyFee", {
+              {...register("monthlyFee", {
                 valueAsNumber: true,
               })}
             />
 
-            {form.formState.errors.monthlyFee && (
+            {errors.monthlyFee && (
               <p className="text-sm text-destructive">
-                {form.formState.errors.monthlyFee.message}
+                {errors.monthlyFee.message}
               </p>
             )}
           </div>
 
-          {/* Actions */}
           <div className="flex justify-end gap-2">
             <Button
               type="button"
               variant="outline"
               onClick={() => handleOpenChange(false)}
-              disabled={form.formState.isSubmitting}
+              disabled={isSubmitting}
             >
               Cancel
             </Button>
 
             <Button
               type="submit"
-              disabled={
-                form.formState.isSubmitting ||
-                loadingMembers ||
-                members.length === 0
-              }
+              disabled={isSubmitting || loadingMembers || members.length === 0}
             >
-              {form.formState.isSubmitting
-                ? "Creating..."
-                : "Create Membership"}
+              {isSubmitting
+                ? isEditing
+                  ? "Updating..."
+                  : "Creating..."
+                : isEditing
+                  ? "Update Membership"
+                  : "Create Membership"}
             </Button>
           </div>
         </form>

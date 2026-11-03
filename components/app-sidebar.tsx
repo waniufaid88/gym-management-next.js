@@ -9,7 +9,7 @@ import {
   LayoutDashboard,
   Users,
   History,
-  Timer,
+  Clock,
 } from "lucide-react";
 import {
   Sidebar,
@@ -29,7 +29,7 @@ const links = [
   { title: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
   { title: "Members", href: "/members", icon: Users },
   { title: "Membership", href: "/membership", icon: CalendarDays },
-  { title: "Shifts", href: "/shifts", icon: Timer },
+  { title: "Shifts", href: "/shifts", icon: Clock },
   { title: "Payments", href: "/payments", icon: CreditCard },
   { title: "History", href: "/history", icon: History },
 ];

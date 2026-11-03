@@ -5,9 +5,18 @@ export const Shift = pgTable("shifts", (t) => ({
   id: t.uuid().defaultRandom().primaryKey(),
   startTime: t.time("start_time").notNull(),
   endTime: t.time("end_time").notNull(),
+
+  userId: t
+    .uuid("user_id")
+    .notNull()
+    .references(() => User.id),
 }));
 
-export const ShiftRelations = relations(Shift, ({ many }) => ({
+export const ShiftRelations = relations(Shift, ({ one, many }) => ({
+  user: one(User, {
+    fields: [Shift.userId],
+    references: [User.id],
+  }),
   members: many(Member),
 }));
 
@@ -22,6 +31,7 @@ export const User = pgTable("users", (t) => ({
 
 export const UserRelations = relations(User, ({ many }) => ({
   members: many(Member),
+  shifts: many(Shift),
 }));
 
 export const Member = pgTable("members", (t) => ({
@@ -56,7 +66,6 @@ export const MemberRelations = relations(Member, ({ one, many }) => ({
   }),
 
   payments: many(Payment),
-
   memberships: many(Membership),
 }));
 
@@ -68,6 +77,11 @@ export const Payment = pgTable("payments", (t) => ({
     .notNull()
     .references(() => Member.id),
 
+  membershipId: t
+    .uuid("membership_id")
+    .notNull()
+    .references(() => Membership.id),
+
   amount: t.numeric({ precision: 10, scale: 2 }).notNull(),
   paymentDate: t.timestamp("payment_date").defaultNow().notNull(),
   paymentMode: t.varchar("payment_mode", { length: 50 }).notNull(),
@@ -78,6 +92,10 @@ export const PaymentRelations = relations(Payment, ({ one }) => ({
   member: one(Member, {
     fields: [Payment.memberId],
     references: [Member.id],
+  }),
+  membership: one(Membership, {
+    fields: [Payment.membershipId],
+    references: [Membership.id],
   }),
 }));
 
@@ -96,9 +114,10 @@ export const Membership = pgTable("memberships", (t) => ({
   updated_at: t.timestamp().defaultNow().notNull(),
 }));
 
-export const MembershipRelations = relations(Membership, ({ one }) => ({
+export const MembershipRelations = relations(Membership, ({ one, many }) => ({
   member: one(Member, {
     fields: [Membership.memberId],
     references: [Member.id],
   }),
+  payments: many(Payment),
 }));

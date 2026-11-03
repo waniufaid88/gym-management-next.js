@@ -79,10 +79,7 @@ export async function GET(request: NextRequest) {
     console.error("Dashboard API error:", error);
 
     return NextResponse.json(
-      {
-        message: "Could not load dashboard statistics",
-        error: error instanceof Error ? error.message : String(error),
-      },
+      { message: "Could not load dashboard statistics" },
       { status: 500 },
     );
   }

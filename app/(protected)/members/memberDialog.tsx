@@ -5,6 +5,7 @@ import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Plus } from "lucide-react";
+import { toast } from "react-hot-toast";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -18,27 +19,63 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 
+export type Shift = {
+  id: string;
+  startTime: string;
+  endTime: string;
+};
+
+export type GymMember = {
+  id: string;
+  name: string;
+  phone: string;
+  address: string;
+  dob: string;
+  gender: "Male" | "Female" | "Other";
+  shiftId: string | null;
+  shift: Shift | null;
+  created_at: string;
+};
+
 const memberSchema = z.object({
-  name: z.string().min(2, "Name must be at least 2 characters"),
-  phone: z.string().min(10, "Phone must be at least 10 characters"),
-  address: z.string().min(3, "Please enter an address"),
+  name: z.string().trim().min(2, "Name must be at least 2 characters"),
+  phone: z.string().trim().min(10, "Phone must be at least 10 characters"),
+  address: z.string().trim().min(3, "Please enter an address"),
   dob: z.string().min(1, "Date of birth is required"),
   gender: z.enum(["Male", "Female", "Other"], {
     message: "Please select a gender",
   }),
-  shiftId: z.string(),
+  shiftId: z.string().min(1, "Please select a shift"),
 });
 
-type MemberFormValues = z.infer<typeof memberSchema>;
+export type MemberFormValues = z.infer<typeof memberSchema>;
 
-const shifts = [
-  { id: "1", name: "Morning (6 AM - 10 AM)" },
-  { id: "2", name: "Evening (4 PM - 8 PM)" },
-  { id: "3", name: "Night (8 PM - 11 PM)" },
-];
+type MemberDialogProps = {
+  shifts: Shift[];
+  member?: GymMember | null;
+  onSaved: () => void | Promise<void>;
+  onClose?: () => void;
+};
 
-export default function MemberDialog() {
-  const [open, setOpen] = useState(false);
+const emptyValues: MemberFormValues = {
+  name: "",
+  phone: "",
+  address: "",
+  dob: "",
+  gender: "Male",
+  shiftId: "",
+};
+
+export default function MemberDialog({
+  shifts,
+  member,
+  onSaved,
+  onClose,
+}: MemberDialogProps) {
+  const isEditing = Boolean(member);
+
+  const [open, setOpen] = useState(isEditing);
+  const [loading, setLoading] = useState(false);
 
   const {
     register,
@@ -47,37 +84,98 @@ export default function MemberDialog() {
     formState: { errors },
   } = useForm<MemberFormValues>({
     resolver: zodResolver(memberSchema),
-    defaultValues: {
-      name: "",
-      phone: "",
-      address: "",
-      dob: "",
-      gender: "Male",
-      shiftId: "",
-    },
+    defaultValues: emptyValues,
   });
 
-  function onSubmit(data: MemberFormValues) {
-    console.log("Member form:", data);
+  function handleOpenChange(value: boolean) {
+    setOpen(value);
 
-    reset();
-    setOpen(false);
+    if (!value && isEditing) {
+      onClose?.();
+    }
+
+    if (value) {
+      reset(
+        member
+          ? {
+              name: member.name,
+              phone: member.phone,
+              address: member.address,
+              dob: member.dob?.slice(0, 10) ?? "",
+              gender: member.gender,
+              shiftId: member.shiftId ?? member.shift?.id ?? "",
+            }
+          : emptyValues,
+      );
+    }
+  }
+
+  async function onSubmit(data: MemberFormValues) {
+    try {
+      setLoading(true);
+
+      const response = await fetch(
+        isEditing ? `/api/members/${member!.id}` : "/api/members",
+        {
+          method: isEditing ? "PATCH" : "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          credentials: "include",
+          body: JSON.stringify(data),
+        },
+      );
+
+      const result = await response.json();
+
+      if (!response.ok) {
+        throw new Error(result.message || "Something went wrong");
+      }
+
+      toast.success(
+        isEditing
+          ? "Member updated successfully!"
+          : "Member added successfully!",
+      );
+
+      await onSaved();
+
+      reset(emptyValues);
+      setOpen(false);
+
+      if (isEditing) {
+        onClose?.();
+      }
+    } catch (error) {
+      toast.error(
+        error instanceof Error ? error.message : "Something went wrong",
+      );
+    } finally {
+      setLoading(false);
+    }
   }
 
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger>
-        <Button onClick={() => setOpen(true)}>
-          <Plus className="mr-2 h-4 w-4" />
-          Add Member
-        </Button>
-      </DialogTrigger>
+    <Dialog open={open} onOpenChange={handleOpenChange}>
+      {!member && (
+        <DialogTrigger>
+          <Button>
+            <Plus className="mr-2 h-4 w-4" />
+            Add Member
+          </Button>
+        </DialogTrigger>
+      )}
 
       <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-[550px]">
         <DialogHeader>
-          <DialogTitle>Add New Member</DialogTitle>
+          <DialogTitle>
+            {isEditing ? "Edit Member" : "Add New Member"}
+          </DialogTitle>
+
           <DialogDescription>
-            Enter the member details below to add a new gym member.
+            {isEditing
+              ? "Update the member details below."
+              : "Enter the member details below to add a new gym member."}
           </DialogDescription>
         </DialogHeader>
 
@@ -141,6 +239,7 @@ export default function MemberDialog() {
                 <option value="Female">Female</option>
                 <option value="Other">Other</option>
               </select>
+
               {errors.gender && (
                 <p className="text-sm text-destructive">
                   {errors.gender.message}
@@ -157,12 +256,14 @@ export default function MemberDialog() {
               className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm shadow-xs outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50"
             >
               <option value="">Select a shift</option>
+
               {shifts.map((shift) => (
                 <option key={shift.id} value={shift.id}>
-                  {shift.name}
+                  {shift.startTime.slice(0, 5)} - {shift.endTime.slice(0, 5)}
                 </option>
               ))}
             </select>
+
             {errors.shiftId && (
               <p className="text-sm text-destructive">
                 {errors.shiftId.message}
@@ -174,15 +275,19 @@ export default function MemberDialog() {
             <Button
               type="button"
               variant="outline"
-              onClick={() => {
-                reset();
-                setOpen(false);
-              }}
+              disabled={loading}
+              onClick={() => handleOpenChange(false)}
             >
               Cancel
             </Button>
 
-            <Button type="submit">Add Member</Button>
+            <Button type="submit" disabled={loading}>
+              {loading
+                ? "Please wait..."
+                : isEditing
+                  ? "Update Member"
+                  : "Add Member"}
+            </Button>
           </div>
         </form>
       </DialogContent>

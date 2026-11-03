@@ -29,7 +29,7 @@ export async function POST(request: Request) {
     }
 
     const accessToken = jwt.sign({ id: user.id }, ACCESS_SECRET, {
-      expiresIn: "15m",
+      expiresIn: "1d",
     });
     const refreshToken = jwt.sign({ id: user.id }, REFRESH_SECRET, {
       expiresIn: "7d",
@@ -45,7 +45,7 @@ export async function POST(request: Request) {
       secure: process.env.NODE_ENV === "production",
       sameSite: "strict",
       path: "/",
-      maxAge: 15 * 60,
+      maxAge: 1 * 24 * 60 * 60,
     });
     response.cookies.set("refreshToken", refreshToken, {
       httpOnly: true,

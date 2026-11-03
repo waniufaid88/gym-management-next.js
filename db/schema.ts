@@ -3,8 +3,8 @@ import { pgTable } from "drizzle-orm/pg-core";
 
 export const Shift = pgTable("shifts", (t) => ({
   id: t.uuid().defaultRandom().primaryKey(),
-  startTime: t.time().notNull(),
-  endTime: t.time().notNull(),
+  startTime: t.time("start_time").notNull(),
+  endTime: t.time("end_time").notNull(),
 }));
 
 export const ShiftRelations = relations(Shift, ({ many }) => ({
@@ -68,8 +68,8 @@ export const Payment = pgTable("payments", (t) => ({
     .references(() => Member.id),
 
   amount: t.numeric({ precision: 10, scale: 2 }).notNull(),
-  paymentDate: t.timestamp().defaultNow().notNull(),
-  paymentMode: t.varchar({ length: 50 }).notNull(),
+  paymentDate: t.timestamp("payment_date").defaultNow().notNull(),
+  paymentMode: t.varchar("payment_mode", { length: 50 }).notNull(),
   created_at: t.timestamp().defaultNow().notNull(),
 }));
 
@@ -88,13 +88,10 @@ export const Membership = pgTable("memberships", (t) => ({
     .notNull()
     .references(() => Member.id),
 
-  startDate: t.date().notNull(),
-  endDate: t.date().notNull(),
-
-  monthlyFee: t.numeric({ precision: 10, scale: 2 }).notNull(),
-
+  startDate: t.date("start_date").notNull(),
+  endDate: t.date("end_date").notNull(),
+  monthlyFee: t.numeric("monthly_fee", { precision: 10, scale: 2 }).notNull(),
   status: t.varchar({ length: 30 }).notNull(),
-
   created_at: t.timestamp().defaultNow().notNull(),
   updated_at: t.timestamp().defaultNow().notNull(),
 }));

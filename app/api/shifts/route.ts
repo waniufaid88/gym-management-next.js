@@ -7,7 +7,8 @@ export async function GET() {
     const shifts = await db.select().from(Shift);
     return NextResponse.json(shifts);
   } catch (error) {
-    console.error("Could not load shifts:", error);
+    console.error("SHIFTS API ERROR:", error);
+
     return NextResponse.json(
       { message: "Could not load shifts" },
       { status: 500 },

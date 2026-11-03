@@ -4,7 +4,6 @@ import { getAuthenticatedUserId } from "@/lib/auth";
 import { desc, eq } from "drizzle-orm";
 import { NextRequest, NextResponse } from "next/server";
 
-// GET all members
 export async function GET(request: NextRequest) {
   const userId = getAuthenticatedUserId(request);
 
@@ -32,7 +31,6 @@ export async function GET(request: NextRequest) {
   }
 }
 
-// POST add member
 export async function POST(request: NextRequest) {
   const userId = getAuthenticatedUserId(request);
 

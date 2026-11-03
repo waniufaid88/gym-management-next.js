@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -32,6 +32,7 @@ export type GymMember = {
   address: string;
   dob: string;
   gender: "Male" | "Female" | "Other";
+  status: "active" | "inactive";
   shiftId: string | null;
   shift: Shift | null;
   created_at: string;
@@ -81,11 +82,26 @@ export default function MemberDialog({
     register,
     handleSubmit,
     reset,
-    formState: { errors },
+    formState: { errors, isDirty },
   } = useForm<MemberFormValues>({
     resolver: zodResolver(memberSchema),
     defaultValues: emptyValues,
   });
+
+  useEffect(() => {
+    if (member) {
+      reset({
+        name: member.name,
+        phone: member.phone,
+        address: member.address,
+        dob: member.dob?.slice(0, 10) ?? "",
+        gender: member.gender,
+        shiftId: member.shiftId ?? member.shift?.id ?? "",
+      });
+    } else {
+      reset(emptyValues);
+    }
+  }, [member, reset]);
 
   function handleOpenChange(value: boolean) {
     setOpen(value);
@@ -94,19 +110,8 @@ export default function MemberDialog({
       onClose?.();
     }
 
-    if (value) {
-      reset(
-        member
-          ? {
-              name: member.name,
-              phone: member.phone,
-              address: member.address,
-              dob: member.dob?.slice(0, 10) ?? "",
-              gender: member.gender,
-              shiftId: member.shiftId ?? member.shift?.id ?? "",
-            }
-          : emptyValues,
-      );
+    if (value && !isEditing) {
+      reset(emptyValues);
     }
   }
 
@@ -158,12 +163,14 @@ export default function MemberDialog({
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
       {!member && (
-        <DialogTrigger>
-          <Button>
-            <Plus className="mr-2 h-4 w-4" />
-            Add Member
-          </Button>
-        </DialogTrigger>
+        <DialogTrigger
+          render={
+            <Button>
+              <Plus className="mr-2 h-4 w-4" />
+              Add Member
+            </Button>
+          }
+        />
       )}
 
       <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-[550px]">
@@ -281,7 +288,7 @@ export default function MemberDialog({
               Cancel
             </Button>
 
-            <Button type="submit" disabled={loading}>
+            <Button type="submit" disabled={loading || !isDirty}>
               {loading
                 ? "Please wait..."
                 : isEditing

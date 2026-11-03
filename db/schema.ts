@@ -31,6 +31,7 @@ export const Member = pgTable("members", (t) => ({
   phone: t.varchar({ length: 20 }).notNull(),
   dob: t.date().notNull(),
   gender: t.varchar({ length: 20 }).notNull(),
+  status: t.varchar({ length: 20 }).default("active").notNull(),
 
   shiftId: t.uuid("shift_id").references(() => Shift.id),
 
@@ -91,7 +92,6 @@ export const Membership = pgTable("memberships", (t) => ({
   startDate: t.date("start_date").notNull(),
   endDate: t.date("end_date").notNull(),
   monthlyFee: t.numeric("monthly_fee", { precision: 10, scale: 2 }).notNull(),
-  status: t.varchar({ length: 30 }).notNull(),
   created_at: t.timestamp().defaultNow().notNull(),
   updated_at: t.timestamp().defaultNow().notNull(),
 }));

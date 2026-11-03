@@ -1,8 +1,9 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Eye, Pencil, Trash2 } from "lucide-react";
+import { Eye, Pencil, Trash2, UserCheck, UserX } from "lucide-react";
 import { toast } from "react-hot-toast";
+import { format, parseISO, differenceInYears } from "date-fns";
 
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -37,25 +38,26 @@ import {
 
 import MemberDialog from "./memberDialog";
 import type { GymMember, Shift } from "./memberDialog";
+import MemberView from "./memberView";
 
 function formatDate(date: string) {
   if (!date) return "-";
 
-  const [year, month, day] = date.slice(0, 10).split("-");
-
-  return `${day}/${month}/${year}`;
+  return format(parseISO(date.slice(0, 10)), "dd/MM/yyyy");
 }
 
 function formatTime(time: string) {
   if (!time) return "-";
 
-  const [hours, minutes] = time.split(":").map(Number);
+  return format(parseISO(`2000-01-01T${time}`), "hh:mm a");
+}
 
-  return new Date(2000, 0, 1, hours, minutes).toLocaleTimeString("en-IN", {
-    hour: "2-digit",
-    minute: "2-digit",
-    hour12: true,
-  });
+function calculateAge(dob: string) {
+  if (!dob) return "-";
+
+  const birthDate = parseISO(dob);
+  const today = new Date();
+  return differenceInYears(today, birthDate);
 }
 
 export default function MemberTable() {
@@ -65,6 +67,7 @@ export default function MemberTable() {
   const [selectedMember, setSelectedMember] = useState<GymMember | null>(null);
   const [editingMember, setEditingMember] = useState<GymMember | null>(null);
   const [deletingMember, setDeletingMember] = useState<GymMember | null>(null);
+  const [updatingStatusId, setUpdatingStatusId] = useState<string | null>(null);
 
   const [loading, setLoading] = useState(true);
   const [deletingId, setDeletingId] = useState<string | null>(null);
@@ -127,6 +130,45 @@ export default function MemberTable() {
       toast.error(
         error instanceof Error ? error.message : "Could not load members",
       );
+    }
+  }
+
+  async function toggleMemberStatus(member: GymMember) {
+    const newStatus = member.status === "active" ? "inactive" : "active";
+
+    try {
+      setUpdatingStatusId(member.id);
+
+      const response = await fetch(`/api/members/${member.id}/status`, {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        credentials: "include",
+        body: JSON.stringify({ status: newStatus }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.message || "Could not update member status");
+      }
+
+      setMembers((prev) =>
+        prev.map((item) =>
+          item.id === member.id ? { ...item, status: newStatus } : item,
+        ),
+      );
+
+      toast.success(data.message || "Member status updated successfully");
+    } catch (error) {
+      toast.error(
+        error instanceof Error
+          ? error.message
+          : "Could not update member status",
+      );
+    } finally {
+      setUpdatingStatusId(null);
     }
   }
 
@@ -194,7 +236,9 @@ export default function MemberTable() {
                     <TableHead>Member Name</TableHead>
                     <TableHead>Phone</TableHead>
                     <TableHead>Gender</TableHead>
+                    <TableHead>Age</TableHead>
                     <TableHead>Shift</TableHead>
+                    <TableHead>Status</TableHead>
                     <TableHead>Joined Date</TableHead>
                     <TableHead className="text-right">Actions</TableHead>
                   </TableRow>
@@ -203,14 +247,14 @@ export default function MemberTable() {
                 <TableBody>
                   {loading ? (
                     <TableRow>
-                      <TableCell colSpan={6} className="h-24 text-center">
+                      <TableCell colSpan={7} className="h-24 text-center">
                         Loading members...
                       </TableCell>
                     </TableRow>
                   ) : error ? (
                     <TableRow>
                       <TableCell
-                        colSpan={6}
+                        colSpan={7}
                         className="h-24 text-center text-destructive"
                       >
                         {error}
@@ -227,6 +271,8 @@ export default function MemberTable() {
 
                         <TableCell>{member.gender}</TableCell>
 
+                        <TableCell>{calculateAge(member.dob)}</TableCell>
+
                         <TableCell>
                           {member.shift ? (
                             <Badge variant="secondary">
@@ -238,6 +284,18 @@ export default function MemberTable() {
                               No shift
                             </span>
                           )}
+                        </TableCell>
+
+                        <TableCell>
+                          <Badge
+                            variant={
+                              member.status === "active"
+                                ? "default"
+                                : "secondary"
+                            }
+                          >
+                            {member.status === "active" ? "Active" : "Inactive"}
+                          </Badge>
                         </TableCell>
 
                         <TableCell>{formatDate(member.created_at)}</TableCell>
@@ -265,6 +323,24 @@ export default function MemberTable() {
                             <Button
                               variant="ghost"
                               size="icon"
+                              title={
+                                member.status === "active"
+                                  ? "Deactivate member"
+                                  : "Activate member"
+                              }
+                              disabled={updatingStatusId !== null}
+                              onClick={() => toggleMemberStatus(member)}
+                            >
+                              {member.status === "active" ? (
+                                <UserCheck className="h-4 w-4 text-green-600" />
+                              ) : (
+                                <UserX className="h-4 w-4 text-destructive" />
+                              )}
+                            </Button>
+
+                            <Button
+                              variant="ghost"
+                              size="icon"
                               title="Delete member"
                               disabled={deletingId === member.id}
                               onClick={() => setDeletingMember(member)}
@@ -278,7 +354,7 @@ export default function MemberTable() {
                   ) : (
                     <TableRow>
                       <TableCell
-                        colSpan={6}
+                        colSpan={7}
                         className="h-24 text-center text-muted-foreground"
                       >
                         No members added yet.
@@ -292,65 +368,13 @@ export default function MemberTable() {
         </Card>
       </div>
 
-      <Dialog
+      <MemberView
+        member={selectedMember}
         open={!!selectedMember}
         onOpenChange={(open) => {
           if (!open) setSelectedMember(null);
         }}
-      >
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Member Details</DialogTitle>
-          </DialogHeader>
-
-          {selectedMember && (
-            <div className="grid grid-cols-2 gap-4 text-sm">
-              <div>
-                <p className="text-muted-foreground">Full Name</p>
-                <p className="mt-1 font-medium">{selectedMember.name}</p>
-              </div>
-
-              <div>
-                <p className="text-muted-foreground">Phone</p>
-                <p className="mt-1 font-medium">{selectedMember.phone}</p>
-              </div>
-
-              <div>
-                <p className="text-muted-foreground">Gender</p>
-                <p className="mt-1 font-medium">{selectedMember.gender}</p>
-              </div>
-
-              <div>
-                <p className="text-muted-foreground">Date of Birth</p>
-                <p className="mt-1 font-medium">
-                  {formatDate(selectedMember.dob)}
-                </p>
-              </div>
-
-              <div className="col-span-2">
-                <p className="text-muted-foreground">Gym Shift</p>
-                <p className="mt-1 font-medium">
-                  {selectedMember.shift
-                    ? `${formatTime(selectedMember.shift.startTime)} - ${formatTime(selectedMember.shift.endTime)}`
-                    : "No shift assigned"}
-                </p>
-              </div>
-
-              <div className="col-span-2">
-                <p className="text-muted-foreground">Joined Date</p>
-                <p className="mt-1 font-medium">
-                  {formatDate(selectedMember.created_at)}
-                </p>
-              </div>
-
-              <div className="col-span-2">
-                <p className="text-muted-foreground">Address</p>
-                <p className="mt-1 font-medium">{selectedMember.address}</p>
-              </div>
-            </div>
-          )}
-        </DialogContent>
-      </Dialog>
+      />
 
       {editingMember && (
         <MemberDialog

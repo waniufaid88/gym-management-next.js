@@ -122,14 +122,14 @@ export default function DashboardPage() {
       </div>
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-        {dashboardStats.map((stat) => {
-          const Icon = stat.icon;
+        {dashboardStats.map((s) => {
+          const Icon = s.icon;
 
           return (
-            <Card key={stat.title}>
+            <Card key={s.title}>
               <CardContent className="p-5">
                 <div className="flex items-center justify-between">
-                  <p className="text-sm text-muted-foreground">{stat.title}</p>
+                  <p className="text-sm text-muted-foreground">{s.title}</p>
 
                   <div className="rounded-lg bg-muted p-2.5">
                     <Icon className="h-5 w-5" />
@@ -137,7 +137,7 @@ export default function DashboardPage() {
                 </div>
 
                 <h2 className="mt-4 text-2xl font-bold">
-                  {loading ? "Loading..." : stat.value}
+                  {loading ? "Loading..." : s.value}
                 </h2>
               </CardContent>
             </Card>

@@ -5,13 +5,13 @@ import { eq } from "drizzle-orm";
 import { NextRequest, NextResponse } from "next/server";
 
 export async function GET(request: NextRequest) {
-  const userId = getAuthenticatedUserId(request);
-
-  if (!userId) {
-    return NextResponse.json({ message: "Please log in" }, { status: 401 });
-  }
-
   try {
+    const userId = await getAuthenticatedUserId(request);
+
+    if (!userId) {
+      return NextResponse.json({ message: "Please log in" }, { status: 401 });
+    }
+
     const members = await db.query.Member.findMany({
       where: eq(Member.userId, userId),
       with: {
@@ -21,52 +21,61 @@ export async function GET(request: NextRequest) {
     });
 
     const today = new Date();
-    today.setHours(0, 0, 0, 0);
+
+    const formatDate = (date: Date) => {
+      const year = date.getFullYear();
+      const month = String(date.getMonth() + 1).padStart(2, "0");
+      const day = String(date.getDate()).padStart(2, "0");
+
+      return `${year}-${month}-${day}`;
+    };
+
+    const todayDate = formatDate(today);
 
     const sevenDaysLater = new Date(today);
-    sevenDaysLater.setDate(today.getDate() + 7);
+    sevenDaysLater.setDate(sevenDaysLater.getDate() + 7);
 
-    const todayDate = today.toISOString().split("T")[0];
-    const expiringDate = sevenDaysLater.toISOString().split("T")[0];
+    const expiringDate = formatDate(sevenDaysLater);
 
     const totalMembers = members.length;
 
-    const activeMemberships = members.reduce((total, member) => {
-      const active = member.memberships.filter(
-        (membership) =>
-          membership.status === "Active" && membership.endDate >= todayDate,
-      );
+    const activeMembers = members.filter(
+      (member) => member.status.toLowerCase() === "active",
+    );
 
-      return total + active.length;
+    const activeMemberships = activeMembers.reduce((total, member) => {
+      const count = member.memberships.filter(
+        (membership) =>
+          membership.startDate <= todayDate && membership.endDate >= todayDate,
+      ).length;
+
+      return total + count;
     }, 0);
 
-    const expiringSoon = members.reduce((total, member) => {
-      const expiring = member.memberships.filter(
+    const expiringSoon = activeMembers.reduce((total, member) => {
+      const count = member.memberships.filter(
         (membership) =>
-          membership.status === "Active" &&
+          membership.startDate <= todayDate &&
           membership.endDate >= todayDate &&
           membership.endDate <= expiringDate,
-      );
+      ).length;
 
-      return total + expiring.length;
+      return total + count;
     }, 0);
 
-    const currentMonth = today.getMonth();
-    const currentYear = today.getFullYear();
-
     const monthlyRevenue = members.reduce((total, member) => {
-      const memberRevenue = member.payments
+      const revenue = member.payments
         .filter((payment) => {
           const paymentDate = new Date(payment.paymentDate);
 
           return (
-            paymentDate.getMonth() === currentMonth &&
-            paymentDate.getFullYear() === currentYear
+            paymentDate.getMonth() === today.getMonth() &&
+            paymentDate.getFullYear() === today.getFullYear()
           );
         })
         .reduce((sum, payment) => sum + Number(payment.amount), 0);
 
-      return total + memberRevenue;
+      return total + revenue;
     }, 0);
 
     return NextResponse.json({

@@ -8,7 +8,7 @@ import {
   SidebarTrigger,
 } from "@/components/ui/sidebar";
 
-import AppSidebar from "@/components/app-sidebar";
+import AppSidebar from "@/components/appSidebar";
 import { getCurrentUser } from "@/lib/auth";
 
 export default function ProtectedLayout({ children }: { children: ReactNode }) {

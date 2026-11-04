@@ -30,6 +30,16 @@ export async function GET(
             paymentDate: true,
             paymentMode: true,
           },
+          with: {
+            membership: {
+              columns: {
+                id: true,
+                startDate: true,
+                endDate: true,
+                monthlyFee: true,
+              },
+            },
+          },
           orderBy: [desc(Payment.paymentDate)],
         },
       },

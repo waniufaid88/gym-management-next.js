@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import { Pencil, Plus, Trash2 } from "lucide-react";
 import { toast } from "react-hot-toast";
 
@@ -35,41 +36,23 @@ function formatTime(time: string) {
   return `${String(formattedHours).padStart(2, "0")}:${String(minutes).padStart(2, "0")} ${period}`;
 }
 
-export default function ShiftTable() {
-  const [shifts, setShifts] = useState<Shift[]>([]);
-  const [loading, setLoading] = useState(true);
+type ShiftTableProps = { initialShifts: Shift[] };
+
+export default function ShiftTable({ initialShifts }: ShiftTableProps) {
+  const router = useRouter();
+  const [shifts, setShifts] = useState<Shift[]>(initialShifts);
+  const [loading] = useState(false);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingShift, setEditingShift] = useState<Shift | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
 
   async function fetchShifts() {
-    try {
-      setLoading(true);
-
-      const response = await fetch("/api/shifts", {
-        credentials: "include",
-        cache: "no-store",
-      });
-
-      const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(data.message || "Could not fetch shifts");
-      }
-
-      setShifts(data);
-    } catch (error) {
-      toast.error(
-        error instanceof Error ? error.message : "Could not fetch shifts",
-      );
-    } finally {
-      setLoading(false);
-    }
+    router.refresh();
   }
 
   useEffect(() => {
-    fetchShifts();
-  }, []);
+    setShifts(initialShifts);
+  }, [initialShifts]);
 
   function openAddDialog() {
     setEditingShift(null);
@@ -105,6 +88,7 @@ export default function ShiftTable() {
       }
 
       setShifts((previous) => previous.filter((shift) => shift.id !== id));
+      router.refresh();
 
       toast.success(data.message || "Shift deleted successfully");
     } catch (error) {

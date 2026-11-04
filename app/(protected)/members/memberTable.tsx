@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import { Pencil, Trash2, UserCheck, UserX } from "lucide-react";
 import { toast } from "react-hot-toast";
 import { format, parseISO, differenceInYears } from "date-fns";
@@ -32,6 +33,10 @@ import {
 import MemberDialog from "./memberDialog";
 import type { GymMember, Shift } from "./memberDialog";
 
+type MemberTableProps = {
+  initialMembers: GymMember[];
+};
+
 function formatDate(date: string) {
   if (!date) return "-";
 
@@ -48,81 +53,52 @@ function calculateAge(dob: string) {
   if (!dob) return "-";
 
   const birthDate = parseISO(dob);
-  const today = new Date();
 
-  return differenceInYears(today, birthDate);
+  return differenceInYears(new Date(), birthDate);
 }
 
-export default function MemberTable() {
-  const [members, setMembers] = useState<GymMember[]>([]);
+export default function MemberTable({ initialMembers }: MemberTableProps) {
+  const router = useRouter();
+
+  const [members, setMembers] = useState<GymMember[]>(initialMembers);
   const [shifts, setShifts] = useState<Shift[]>([]);
 
   const [editingMember, setEditingMember] = useState<GymMember | null>(null);
   const [deletingMember, setDeletingMember] = useState<GymMember | null>(null);
   const [updatingStatusId, setUpdatingStatusId] = useState<string | null>(null);
-
-  const [loading, setLoading] = useState(true);
   const [deletingId, setDeletingId] = useState<string | null>(null);
-  const [error, setError] = useState("");
 
   useEffect(() => {
-    async function fetchData() {
+    setMembers(initialMembers);
+  }, [initialMembers]);
+
+  useEffect(() => {
+    async function fetchShifts() {
       try {
-        const [membersResponse, shiftsResponse] = await Promise.all([
-          fetch("/api/members", {
-            credentials: "include",
-            cache: "no-store",
-          }),
-          fetch("/api/shifts", {
-            credentials: "include",
-            cache: "no-store",
-          }),
-        ]);
+        const response = await fetch("/api/shifts", {
+          credentials: "include",
+          cache: "no-store",
+        });
 
-        const membersData = await membersResponse.json();
-        const shiftsData = await shiftsResponse.json();
+        const data = await response.json();
 
-        if (!membersResponse.ok) {
-          throw new Error(membersData.message || "Could not load members");
+        if (!response.ok) {
+          throw new Error(data.message || "Could not load shifts");
         }
 
-        if (!shiftsResponse.ok) {
-          throw new Error(shiftsData.message || "Could not load shifts");
-        }
-
-        setMembers(membersData);
-        setShifts(shiftsData);
+        setShifts(data);
       } catch (error) {
-        setError(
-          error instanceof Error ? error.message : "Something went wrong",
+        toast.error(
+          error instanceof Error ? error.message : "Could not load shifts",
         );
-      } finally {
-        setLoading(false);
       }
     }
 
-    fetchData();
+    fetchShifts();
   }, []);
 
-  async function fetchMembers() {
-    try {
-      const response = await fetch("/api/members", {
-        credentials: "include",
-        cache: "no-store",
-      });
-
-      const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(data.message || "Could not load members");
-      }
-
-      setMembers(data);
-    } catch (error) {
-      toast.error(
-        error instanceof Error ? error.message : "Could not load members",
-      );
-    }
+  function fetchMembers() {
+    router.refresh();
   }
 
   async function toggleMemberStatus(member: GymMember) {
@@ -181,12 +157,10 @@ export default function MemberTable() {
         throw new Error(data.message || "Could not delete member");
       }
 
-      setMembers((prev) =>
-        prev.filter((item) => item.id !== deletingMember.id),
-      );
-
       toast.success("Member deleted successfully!");
+
       setDeletingMember(null);
+      router.refresh();
     } catch (error) {
       toast.error(
         error instanceof Error ? error.message : "Could not delete member",
@@ -233,22 +207,7 @@ export default function MemberTable() {
                 </TableHeader>
 
                 <TableBody>
-                  {loading ? (
-                    <TableRow>
-                      <TableCell colSpan={8} className="h-24 text-center">
-                        Loading members...
-                      </TableCell>
-                    </TableRow>
-                  ) : error ? (
-                    <TableRow>
-                      <TableCell
-                        colSpan={8}
-                        className="h-24 text-center text-destructive"
-                      >
-                        {error}
-                      </TableCell>
-                    </TableRow>
-                  ) : members.length > 0 ? (
+                  {members.length > 0 ? (
                     members.map((member) => (
                       <TableRow key={member.id}>
                         <TableCell className="font-medium">
@@ -352,8 +311,8 @@ export default function MemberTable() {
           key={editingMember.id}
           shifts={shifts}
           member={editingMember}
-          onSaved={async () => {
-            await fetchMembers();
+          onSaved={() => {
+            fetchMembers();
             setEditingMember(null);
           }}
           onClose={() => setEditingMember(null)}

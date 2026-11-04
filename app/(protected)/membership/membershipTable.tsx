@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import {
   addDays,
   differenceInCalendarMonths,
@@ -48,6 +49,7 @@ type Membership = {
   monthlyFee: string;
   member: GymMember;
 };
+type MembershipTableProps = { initialMemberships: Membership[] };
 
 type MembershipStatus = "active" | "expired" | "upcoming";
 
@@ -82,42 +84,22 @@ function getDuration(startDate: string, endDate: string) {
   );
 }
 
-export default function MembershipTable() {
-  const [memberships, setMemberships] = useState<Membership[]>([]);
-  const [loading, setLoading] = useState(true);
+export default function MembershipTable({ initialMemberships }: MembershipTableProps) {
+  const router = useRouter();
+  const [memberships, setMemberships] = useState<Membership[]>(initialMemberships);
+  const [loading] = useState(false);
   const [editingMembership, setEditingMembership] = useState<Membership | null>(
     null,
   );
   const [deletingId, setDeletingId] = useState<string | null>(null);
 
   async function fetchMemberships() {
-    try {
-      setLoading(true);
-
-      const response = await fetch("/api/memberships", {
-        credentials: "include",
-        cache: "no-store",
-      });
-
-      const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(data.message || "Could not fetch memberships");
-      }
-
-      setMemberships(data);
-    } catch (error) {
-      toast.error(
-        error instanceof Error ? error.message : "Could not fetch memberships",
-      );
-    } finally {
-      setLoading(false);
-    }
+    router.refresh();
   }
 
   useEffect(() => {
-    fetchMemberships();
-  }, []);
+    setMemberships(initialMemberships);
+  }, [initialMemberships]);
 
   async function deleteMembership(id: string) {
     try {
@@ -137,6 +119,7 @@ export default function MembershipTable() {
       setMemberships((prev) =>
         prev.filter((membership) => membership.id !== id),
       );
+      router.refresh();
 
       toast.success(data.message || "Membership deleted successfully");
     } catch (error) {

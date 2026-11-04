@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import { format } from "date-fns";
 import { Eye, Plus } from "lucide-react";
 import toast from "react-hot-toast";
@@ -24,46 +25,37 @@ type Member = {
   phone: string;
 };
 
-export default function PaymentTable() {
-  const [payments, setPayments] = useState<Payment[]>([]);
-  const [loading, setLoading] = useState(true);
+type PaymentTableProps = { initialPayments: Payment[] };
+
+export default function PaymentTable({ initialPayments }: PaymentTableProps) {
+  const router = useRouter();
+  const [payments, setPayments] = useState<Payment[]>(initialPayments);
+  const [loading] = useState(false);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [historyOpen, setHistoryOpen] = useState(false);
   const [selectedMember, setSelectedMember] = useState<Member | null>(null);
-  const [refresh, setRefresh] = useState(0);
+  const [historyPayments, setHistoryPayments] = useState<Payment[]>([]);
 
   useEffect(() => {
-    const fetchPayments = async () => {
-      try {
-        setLoading(true);
-
-        const response = await fetch("/api/payments", {
-          credentials: "include",
-          cache: "no-store",
-        });
-
-        const data = await response.json();
-
-        if (!response.ok) {
-          throw new Error(data.message || "Could not load payments");
-        }
-
-        setPayments(data);
-      } catch (error) {
-        toast.error(
-          error instanceof Error ? error.message : "Something went wrong",
-        );
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchPayments();
-  }, [refresh]);
+    setPayments(initialPayments);
+  }, [initialPayments]);
 
   function openHistory(member: Member) {
     setSelectedMember(member);
     setHistoryOpen(true);
+    fetch(`/api/members/${member.id}/payments`, { credentials: "include" })
+      .then((response) => response.json())
+      .then((data) =>
+        setHistoryPayments(
+          data.map((payment: Omit<Payment, "memberId" | "membershipId" | "member">) => ({
+            ...payment,
+            memberId: member.id,
+            membershipId: payment.membership.id,
+            member,
+          })),
+        ),
+      )
+      .catch(() => toast.error("Could not load payment history"));
   }
 
   const uniquePayments = payments.filter(
@@ -71,9 +63,7 @@ export default function PaymentTable() {
       index === self.findIndex((item) => item.memberId === payment.memberId),
   );
 
-  const memberPayments = selectedMember
-    ? payments.filter((payment) => payment.memberId === selectedMember.id)
-    : [];
+  const memberPayments = historyPayments;
 
   return (
     <div className="space-y-6">
@@ -171,7 +161,7 @@ export default function PaymentTable() {
       <PaymentDialog
         open={dialogOpen}
         onOpenChange={setDialogOpen}
-        onSuccess={() => setRefresh((previous) => previous + 1)}
+        onSuccess={() => router.refresh()}
       />
 
       <MemberPaymentHistory

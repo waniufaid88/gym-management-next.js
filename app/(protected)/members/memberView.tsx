@@ -116,7 +116,6 @@ export default function MemberView({
 
         {member && (
           <div className="space-y-6">
-            {/* Member Information */}
             <div className="space-y-4">
               <h3 className="font-semibold">Personal Information</h3>
 

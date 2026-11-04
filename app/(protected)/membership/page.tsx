@@ -1,4 +1,3 @@
-import { Suspense } from "react";
 import { redirect } from "next/navigation";
 import { getMemberships } from "@/db/server";
 import { getServerUserId } from "@/lib/server-auth";
@@ -6,20 +5,13 @@ import Pagination from "@/components/pagination";
 import MembershipTable from "./membershipTable";
 
 type PageProps = {
-  searchParams: Promise<{ page?: string; limit?: string }>;
+  searchParams: Promise<{ page?: string; limit?: string; search?: string }>;
 };
 
-export default function MembershipPage({ searchParams }: PageProps) {
-  return (
-    <Suspense fallback={<div className="p-6">Loading memberships...</div>}>
-      <MembershipContent searchParams={searchParams} />
-    </Suspense>
-  );
-}
-
-async function MembershipContent({ searchParams }: PageProps) {
+export default async function MembershipPage({ searchParams }: PageProps) {
   const params = await searchParams;
   const currentPage = Number(params.page) || 1;
+  const search = params.search?.trim() || "";
 
   const userId = await getServerUserId();
 
@@ -29,11 +21,12 @@ async function MembershipContent({ searchParams }: PageProps) {
     userId,
     currentPage,
     params.limit,
+    search,
   );
 
   return (
     <div className="w-full p-6">
-      <MembershipTable initialMemberships={memberships} />
+      <MembershipTable initialMemberships={memberships} search={search} />
 
       <Pagination
         currentPage={currentPage}

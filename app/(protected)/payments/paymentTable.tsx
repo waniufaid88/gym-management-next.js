@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { format } from "date-fns";
 import { Eye, Plus } from "lucide-react";
 import toast from "react-hot-toast";
+import { SearchForm } from "@/components/searchForm";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -25,9 +26,12 @@ type Member = {
   phone: string;
 };
 
-type PaymentTableProps = { initialPayments: Payment[] };
+type PaymentTableProps = { initialPayments: Payment[]; search: string };
 
-export default function PaymentTable({ initialPayments }: PaymentTableProps) {
+export default function PaymentTable({
+  initialPayments,
+  search,
+}: PaymentTableProps) {
   const router = useRouter();
   const [payments, setPayments] = useState<Payment[]>(initialPayments);
   const [loading] = useState(false);
@@ -47,12 +51,16 @@ export default function PaymentTable({ initialPayments }: PaymentTableProps) {
       .then((response) => response.json())
       .then((data) =>
         setHistoryPayments(
-          data.map((payment: Omit<Payment, "memberId" | "membershipId" | "member">) => ({
-            ...payment,
-            memberId: member.id,
-            membershipId: payment.membership.id,
-            member,
-          })),
+          data.map(
+            (
+              payment: Omit<Payment, "memberId" | "membershipId" | "member">,
+            ) => ({
+              ...payment,
+              memberId: member.id,
+              membershipId: payment.membership.id,
+              member,
+            }),
+          ),
         ),
       )
       .catch(() => toast.error("Could not load payment history"));
@@ -76,10 +84,16 @@ export default function PaymentTable({ initialPayments }: PaymentTableProps) {
           </p>
         </div>
 
-        <Button onClick={() => setDialogOpen(true)}>
-          <Plus className="mr-2 h-4 w-4" />
-          Record Payment
-        </Button>
+        <div className="flex items-center gap-2">
+          <SearchForm
+            initialValue={search}
+            placeholder="Search payments by name or phone"
+          />
+          <Button onClick={() => setDialogOpen(true)}>
+            <Plus className="mr-2 h-4 w-4" />
+            Record Payment
+          </Button>
+        </div>
       </div>
 
       <div className="overflow-x-auto rounded-md border">

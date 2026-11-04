@@ -7,21 +7,28 @@ import type { GymMember } from "./memberDialog";
 import PaginationComponent from "@/components/pagination";
 
 type PageProps = {
-  searchParams: Promise<{ page?: string; limit?: string }>;
+  searchParams: Promise<{
+    page?: string;
+    limit?: string;
+    search?: string;
+  }>;
 };
 
 export default async function Page({ searchParams }: PageProps) {
   const params = await searchParams;
 
   const currentPage = Number(params.page) || 1;
+  const search = params.search?.trim() || "";
 
   const userId = await getServerUserId();
+
   if (!userId) redirect("/login");
 
   const { members, totalCount, totalPages } = await getMembers(
     userId,
     currentPage,
     params.limit,
+    search,
   );
 
   return (
@@ -33,6 +40,7 @@ export default async function Page({ searchParams }: PageProps) {
           status: member.status as GymMember["status"],
           created_at: member.created_at.toISOString(),
         }))}
+        search={search}
       />
 
       <PaginationComponent

@@ -5,12 +5,13 @@ import Pagination from "@/components/pagination";
 import PaymentTable from "./paymentTable";
 
 type PageProps = {
-  searchParams: Promise<{ page?: string; limit?: string }>;
+  searchParams: Promise<{ page?: string; limit?: string; search?: string }>;
 };
 
 export default async function PaymentsPage({ searchParams }: PageProps) {
   const params = await searchParams;
   const currentPage = Number(params.page) || 1;
+  const search = params.search?.trim() || "";
   const userId = await getServerUserId();
   if (!userId) redirect("/login");
 
@@ -18,11 +19,13 @@ export default async function PaymentsPage({ searchParams }: PageProps) {
     userId,
     currentPage,
     params.limit,
+    search,
   );
 
   return (
     <div className="w-full p-6">
       <PaymentTable
+        search={search}
         initialPayments={payments.map((payment) => ({
           ...payment,
           paymentDate: payment.paymentDate.toISOString(),

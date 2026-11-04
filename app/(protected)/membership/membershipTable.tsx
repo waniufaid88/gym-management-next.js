@@ -10,6 +10,7 @@ import {
 } from "date-fns";
 import { Pencil, Trash2 } from "lucide-react";
 import { toast } from "react-hot-toast";
+import { SearchForm } from "@/components/searchForm";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -49,7 +50,11 @@ type Membership = {
   monthlyFee: string;
   member: GymMember;
 };
-type MembershipTableProps = { initialMemberships: Membership[] };
+
+type MembershipTableProps = {
+  initialMemberships: Membership[];
+  search: string;
+};
 
 type MembershipStatus = "active" | "expired" | "upcoming";
 
@@ -84,9 +89,13 @@ function getDuration(startDate: string, endDate: string) {
   );
 }
 
-export default function MembershipTable({ initialMemberships }: MembershipTableProps) {
+export default function MembershipTable({
+  initialMemberships,
+  search,
+}: MembershipTableProps) {
   const router = useRouter();
-  const [memberships, setMemberships] = useState<Membership[]>(initialMemberships);
+  const [memberships, setMemberships] =
+    useState<Membership[]>(initialMemberships);
   const [loading] = useState(false);
   const [editingMembership, setEditingMembership] = useState<Membership | null>(
     null,
@@ -141,7 +150,13 @@ export default function MembershipTable({ initialMemberships }: MembershipTableP
           </p>
         </div>
 
-        <MembershipDialog onSuccess={fetchMemberships} />
+        <div className="flex items-center gap-2">
+          <SearchForm
+            initialValue={search}
+            placeholder="Search memberships by name or phone"
+          />
+          <MembershipDialog onSuccess={fetchMemberships} />
+        </div>
       </div>
 
       <div className="overflow-hidden rounded-md border">

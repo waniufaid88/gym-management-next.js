@@ -1,8 +1,8 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
-import { Pencil, Trash2, UserCheck, UserX } from "lucide-react";
+import { useRouter, useSearchParams } from "next/navigation";
+import { Pencil, Search, Trash2, UserCheck, UserX } from "lucide-react";
 import { toast } from "react-hot-toast";
 import { format, parseISO, differenceInYears } from "date-fns";
 
@@ -32,9 +32,11 @@ import {
 
 import MemberDialog from "./memberDialog";
 import type { GymMember, Shift } from "./memberDialog";
+import { SearchForm } from "@/components/searchForm";
 
 type MemberTableProps = {
   initialMembers: GymMember[];
+  search: string;
 };
 
 function formatDate(date: string) {
@@ -57,7 +59,10 @@ function calculateAge(dob: string) {
   return differenceInYears(new Date(), birthDate);
 }
 
-export default function MemberTable({ initialMembers }: MemberTableProps) {
+export default function MemberTable({
+  initialMembers,
+  search,
+}: MemberTableProps) {
   const router = useRouter();
 
   const [members, setMembers] = useState<GymMember[]>(initialMembers);
@@ -181,8 +186,14 @@ export default function MemberTable({ initialMembers }: MemberTableProps) {
               Manage your gym members and their details.
             </p>
           </div>
+          <div className="flex items-center gap-2">
+            <SearchForm
+              initialValue={search}
+              placeholder="Search members by name or phone"
+            />
 
-          <MemberDialog shifts={shifts} onSaved={fetchMembers} />
+            <MemberDialog shifts={shifts} onSaved={fetchMembers} />
+          </div>
         </div>
 
         <Card>

@@ -40,7 +40,11 @@ export type GymMember = {
 
 const memberSchema = z.object({
   name: z.string().trim().min(2, "Name must be at least 2 characters"),
-  phone: z.string().trim().min(10, "Phone must be at least 10 characters"),
+  // phone: z.string().trim().min(10, "Phone must be at least 10 characters"),
+  phone: z
+    .string()
+    .trim()
+    .regex(/^\+?[0-9]{7,15}$/, "Enter a valid phone number"),
   address: z.string().trim().min(3, "Please enter an address"),
   dob: z.string().min(1, "Date of birth is required"),
   gender: z.enum(["Male", "Female", "Other"], {

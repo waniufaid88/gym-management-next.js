@@ -1,4 +1,4 @@
-import { count, desc, eq, inArray } from "drizzle-orm";
+import { and, count, desc, eq, ilike, inArray, or } from "drizzle-orm";
 import db from ".";
 import { Member, Membership, Payment, Shift } from "./schema";
 
@@ -15,12 +15,25 @@ export async function getMembers(
   userId: string,
   currentPage: number,
   limit?: string,
+  search?: string,
 ) {
   const { pageLimit, offset } = getPageValues(currentPage, limit);
 
+  const searchValue = search?.trim();
+
+  const memberFilter = searchValue
+    ? and(
+        eq(Member.userId, userId),
+        or(
+          ilike(Member.name, `%${searchValue}%`),
+          ilike(Member.phone, `%${searchValue}%`),
+        ),
+      )
+    : eq(Member.userId, userId);
+
   const [members, total] = await Promise.all([
     db.query.Member.findMany({
-      where: (member, { eq }) => eq(member.userId, userId),
+      where: memberFilter,
       with: {
         shift: true,
       },
@@ -29,7 +42,7 @@ export async function getMembers(
       offset,
     }),
 
-    db.select({ count: count() }).from(Member).where(eq(Member.userId, userId)),
+    db.select({ count: count() }).from(Member).where(memberFilter),
   ]);
 
   return {
@@ -78,13 +91,25 @@ export async function getMemberships(
   userId: string,
   currentPage: number,
   limit?: string,
+  search?: string,
 ) {
   const { pageLimit, offset } = getPageValues(currentPage, limit);
+  const searchValue = search?.trim();
 
   const memberIds = db
     .select({ id: Member.id })
     .from(Member)
-    .where(eq(Member.userId, userId));
+    .where(
+      searchValue
+        ? and(
+            eq(Member.userId, userId),
+            or(
+              ilike(Member.name, `%${searchValue}%`),
+              ilike(Member.phone, `%${searchValue}%`),
+            ),
+          )
+        : eq(Member.userId, userId),
+    );
 
   const [memberships, total] = await Promise.all([
     db.query.Membership.findMany({
@@ -121,13 +146,25 @@ export async function getPayments(
   userId: string,
   currentPage: number,
   limit?: string,
+  search?: string,
 ) {
   const { pageLimit, offset } = getPageValues(currentPage, limit);
+  const searchValue = search?.trim();
 
   const memberIds = db
     .select({ id: Member.id })
     .from(Member)
-    .where(eq(Member.userId, userId));
+    .where(
+      searchValue
+        ? and(
+            eq(Member.userId, userId),
+            or(
+              ilike(Member.name, `%${searchValue}%`),
+              ilike(Member.phone, `%${searchValue}%`),
+            ),
+          )
+        : eq(Member.userId, userId),
+    );
 
   const [payments, total] = await Promise.all([
     db.query.Payment.findMany({

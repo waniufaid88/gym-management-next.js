@@ -1,3 +1,4 @@
+import { Suspense } from "react";
 import type { ReactNode } from "react";
 import {
   SidebarInset,
@@ -15,7 +16,11 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
           <SidebarTrigger />
           <span className="font-medium">Gym Management System</span>
         </header>
-        <div className="flex-1 p-4 md:p-6">{children}</div>
+        <div className="flex-1 p-4 md:p-6">
+          <Suspense fallback={<div className="p-6">Loading page...</div>}>
+            {children}
+          </Suspense>
+        </div>
       </SidebarInset>
     </SidebarProvider>
   );

@@ -10,9 +10,12 @@ type PageProps = {
 
 export default async function PaymentsPage({ searchParams }: PageProps) {
   const params = await searchParams;
+
   const currentPage = Number(params.page) || 1;
   const search = params.search?.trim() || "";
+
   const userId = await getServerUserId();
+  
   if (!userId) redirect("/login");
 
   const { payments, totalCount, totalPages } = await getPayments(

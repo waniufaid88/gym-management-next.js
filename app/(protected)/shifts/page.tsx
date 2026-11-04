@@ -10,8 +10,11 @@ type PageProps = {
 
 export default async function ShiftsPage({ searchParams }: PageProps) {
   const params = await searchParams;
+
   const currentPage = Number(params.page) || 1;
+
   const userId = await getServerUserId();
+
   if (!userId) redirect("/login");
 
   const { shifts, totalCount, totalPages } = await getShifts(
@@ -23,7 +26,7 @@ export default async function ShiftsPage({ searchParams }: PageProps) {
   return (
     <div className="w-full p-6">
       <ShiftTable initialShifts={shifts} />
-      
+
       <Pagination
         currentPage={currentPage}
         totalPages={totalPages}

@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { format } from "date-fns";
-import { Plus } from "lucide-react";
+import { Eye, Plus } from "lucide-react";
 import toast from "react-hot-toast";
 
 import { Button } from "@/components/ui/button";
@@ -16,31 +16,20 @@ import {
 } from "@/components/ui/table";
 
 import PaymentDialog from "./paymentDialog";
+import MemberPaymentHistory, { type Payment } from "./PaymentHistory";
 
-type Payment = {
+type Member = {
   id: string;
-  memberId: string;
-  membershipId: string;
-  amount: string;
-  paymentMode: string;
-  paymentDate: string;
-  member: {
-    id: string;
-    name: string;
-    phone: string;
-  };
-  membership: {
-    id: string;
-    startDate: string;
-    endDate: string;
-    monthlyFee: string;
-  };
+  name: string;
+  phone: string;
 };
 
 export default function PaymentTable() {
   const [payments, setPayments] = useState<Payment[]>([]);
   const [loading, setLoading] = useState(true);
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [historyOpen, setHistoryOpen] = useState(false);
+  const [selectedMember, setSelectedMember] = useState<Member | null>(null);
   const [refresh, setRefresh] = useState(0);
 
   useEffect(() => {
@@ -72,11 +61,26 @@ export default function PaymentTable() {
     fetchPayments();
   }, [refresh]);
 
+  function openHistory(member: Member) {
+    setSelectedMember(member);
+    setHistoryOpen(true);
+  }
+
+  const uniquePayments = payments.filter(
+    (payment, index, self) =>
+      index === self.findIndex((item) => item.memberId === payment.memberId),
+  );
+
+  const memberPayments = selectedMember
+    ? payments.filter((payment) => payment.memberId === selectedMember.id)
+    : [];
+
   return (
     <div className="space-y-6">
       <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-center">
         <div>
           <h2 className="text-2xl font-semibold">Payments</h2>
+
           <p className="text-sm text-muted-foreground">
             Manage member payments and payment history.
           </p>
@@ -88,7 +92,7 @@ export default function PaymentTable() {
         </Button>
       </div>
 
-      <div className="rounded-md border">
+      <div className="overflow-x-auto rounded-md border">
         <Table>
           <TableHeader>
             <TableRow>
@@ -97,33 +101,29 @@ export default function PaymentTable() {
               <TableHead>Payment Mode</TableHead>
               <TableHead>Payment Date</TableHead>
               <TableHead>Membership Period</TableHead>
+              <TableHead className="text-right">History</TableHead>
             </TableRow>
           </TableHeader>
 
           <TableBody>
             {loading ? (
               <TableRow>
-                <TableCell
-                  colSpan={5}
-                  className="h-24 text-center text-muted-foreground"
-                >
+                <TableCell colSpan={6} className="h-24 text-center">
                   Loading payments...
                 </TableCell>
               </TableRow>
-            ) : payments.length === 0 ? (
+            ) : uniquePayments.length === 0 ? (
               <TableRow>
-                <TableCell
-                  colSpan={5}
-                  className="h-24 text-center text-muted-foreground"
-                >
+                <TableCell colSpan={6} className="h-24 text-center">
                   No payments found.
                 </TableCell>
               </TableRow>
             ) : (
-              payments.map((payment) => (
-                <TableRow key={payment.id}>
+              uniquePayments.map((payment) => (
+                <TableRow key={payment.memberId}>
                   <TableCell>
                     <div className="font-medium">{payment.member.name}</div>
+
                     <div className="text-sm text-muted-foreground">
                       {payment.member.phone}
                     </div>
@@ -150,6 +150,17 @@ export default function PaymentTable() {
                       "dd MMM yyyy",
                     )}
                   </TableCell>
+
+                  <TableCell className="text-right">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => openHistory(payment.member)}
+                    >
+                      <Eye className="mr-2 h-4 w-4" />
+                      View History
+                    </Button>
+                  </TableCell>
                 </TableRow>
               ))
             )}
@@ -161,6 +172,13 @@ export default function PaymentTable() {
         open={dialogOpen}
         onOpenChange={setDialogOpen}
         onSuccess={() => setRefresh((previous) => previous + 1)}
+      />
+
+      <MemberPaymentHistory
+        open={historyOpen}
+        onOpenChange={setHistoryOpen}
+        member={selectedMember}
+        payments={memberPayments}
       />
     </div>
   );

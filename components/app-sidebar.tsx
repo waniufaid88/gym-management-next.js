@@ -31,7 +31,7 @@ const links = [
   { title: "Membership", href: "/membership", icon: CalendarDays },
   { title: "Shifts", href: "/shifts", icon: Clock },
   { title: "Payments", href: "/payments", icon: CreditCard },
-  { title: "History", href: "/history", icon: History },
+  // { title: "History", href: "/history", icon: History },
 ];
 
 export default function AppSidebar() {

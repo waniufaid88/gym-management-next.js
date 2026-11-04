@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Eye, Pencil, Trash2, UserCheck, UserX } from "lucide-react";
+import { Pencil, Trash2, UserCheck, UserX } from "lucide-react";
 import { toast } from "react-hot-toast";
 import { format, parseISO, differenceInYears } from "date-fns";
 
@@ -31,7 +31,6 @@ import {
 
 import MemberDialog from "./memberDialog";
 import type { GymMember, Shift } from "./memberDialog";
-import MemberView from "./memberView";
 
 function formatDate(date: string) {
   if (!date) return "-";
@@ -50,6 +49,7 @@ function calculateAge(dob: string) {
 
   const birthDate = parseISO(dob);
   const today = new Date();
+
   return differenceInYears(today, birthDate);
 }
 
@@ -57,7 +57,6 @@ export default function MemberTable() {
   const [members, setMembers] = useState<GymMember[]>([]);
   const [shifts, setShifts] = useState<Shift[]>([]);
 
-  const [selectedMember, setSelectedMember] = useState<GymMember | null>(null);
   const [editingMember, setEditingMember] = useState<GymMember | null>(null);
   const [deletingMember, setDeletingMember] = useState<GymMember | null>(null);
   const [updatingStatusId, setUpdatingStatusId] = useState<string | null>(null);
@@ -186,10 +185,6 @@ export default function MemberTable() {
         prev.filter((item) => item.id !== deletingMember.id),
       );
 
-      if (selectedMember?.id === deletingMember.id) {
-        setSelectedMember(null);
-      }
-
       toast.success("Member deleted successfully!");
       setDeletingMember(null);
     } catch (error) {
@@ -240,14 +235,14 @@ export default function MemberTable() {
                 <TableBody>
                   {loading ? (
                     <TableRow>
-                      <TableCell colSpan={7} className="h-24 text-center">
+                      <TableCell colSpan={8} className="h-24 text-center">
                         Loading members...
                       </TableCell>
                     </TableRow>
                   ) : error ? (
                     <TableRow>
                       <TableCell
-                        colSpan={7}
+                        colSpan={8}
                         className="h-24 text-center text-destructive"
                       >
                         {error}
@@ -298,15 +293,6 @@ export default function MemberTable() {
                             <Button
                               variant="ghost"
                               size="icon"
-                              title="View member"
-                              onClick={() => setSelectedMember(member)}
-                            >
-                              <Eye className="h-4 w-4" />
-                            </Button>
-
-                            <Button
-                              variant="ghost"
-                              size="icon"
                               title="Edit member"
                               onClick={() => setEditingMember(member)}
                             >
@@ -347,7 +333,7 @@ export default function MemberTable() {
                   ) : (
                     <TableRow>
                       <TableCell
-                        colSpan={7}
+                        colSpan={8}
                         className="h-24 text-center text-muted-foreground"
                       >
                         No members added yet.
@@ -360,14 +346,6 @@ export default function MemberTable() {
           </CardContent>
         </Card>
       </div>
-
-      <MemberView
-        member={selectedMember}
-        open={!!selectedMember}
-        onOpenChange={(open) => {
-          if (!open) setSelectedMember(null);
-        }}
-      />
 
       {editingMember && (
         <MemberDialog

@@ -10,7 +10,7 @@ type PageProps = {
 
 export default async function MembershipPage({ searchParams }: PageProps) {
   const params = await searchParams;
-  
+
   const currentPage = Number(params.page) || 1;
   const search = params.search?.trim() || "";
 

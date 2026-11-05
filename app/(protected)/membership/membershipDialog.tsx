@@ -11,7 +11,7 @@ import { z } from "zod";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { toast } from "react-hot-toast";
-import { Plus } from "lucide-react";
+import { Check, ChevronsUpDown, Plus } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -31,6 +31,20 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import {
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+} from "@/components/ui/command";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+import { cn } from "cn";
 
 const membershipSchema = z.object({
   memberId: z.string().min(1, "Please select a member"),
@@ -253,32 +267,57 @@ export default function MembershipDialog({
           <div className="space-y-2">
             <Label>Member</Label>
 
-            <Select
-              value={selectedMemberId}
-              onValueChange={(value) => {
-                setValue("memberId", value ?? "", {
-                  shouldValidate: true,
-                  shouldDirty: true,
-                });
-              }}
-              disabled={loadingMembers || members.length === 0}
-            >
-              <SelectTrigger className="w-full">
-                <SelectValue placeholder="Select a member">
+            <Popover>
+              <PopoverTrigger>
+                <Button
+                  variant="outline"
+                  role="combobox"
+                  className="w-full justify-between"
+                  disabled={loadingMembers || members.length === 0}
+                >
                   {selectedMember
                     ? `${selectedMember.name} - ${selectedMember.phone}`
                     : "Select a member"}
-                </SelectValue>
-              </SelectTrigger>
 
-              <SelectContent>
-                {members.map((member) => (
-                  <SelectItem key={member.id} value={member.id}>
-                    {member.name} - {member.phone}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+                  <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                </Button>
+              </PopoverTrigger>
+
+              <PopoverContent className="w-full p-0" align="start">
+                <Command>
+                  <CommandInput placeholder="Search member..." />
+
+                  <CommandList>
+                    <CommandEmpty>No member found.</CommandEmpty>
+
+                    <CommandGroup>
+                      {members.map((member) => (
+                        <CommandItem
+                          key={member.id}
+                          value={`${member.name} ${member.phone}`}
+                          onSelect={() => {
+                            setValue("memberId", member.id, {
+                              shouldValidate: true,
+                              shouldDirty: true,
+                            });
+                          }}
+                        >
+                          <Check
+                            className={cn(
+                              "mr-2 h-4 w-4",
+                              selectedMemberId === member.id
+                                ? "opacity-100"
+                                : "opacity-0",
+                            )}
+                          />
+                          {member.name} - {member.phone}
+                        </CommandItem>
+                      ))}
+                    </CommandGroup>
+                  </CommandList>
+                </Command>
+              </PopoverContent>
+            </Popover>
 
             {errors.memberId && (
               <p className="text-sm text-destructive">

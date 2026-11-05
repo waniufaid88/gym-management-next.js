@@ -11,7 +11,7 @@ import { z } from "zod";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { toast } from "react-hot-toast";
-import { Check, ChevronsUpDown, Plus } from "lucide-react";
+import { Plus } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -31,20 +31,15 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+
 import {
-  Command,
-  CommandEmpty,
-  CommandGroup,
-  CommandInput,
-  CommandItem,
-  CommandList,
-} from "@/components/ui/command";
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover";
-import { cn } from "cn";
+  Combobox,
+  ComboboxContent,
+  ComboboxEmpty,
+  ComboboxInput,
+  ComboboxItem,
+  ComboboxList,
+} from "@/components/ui/combobox";
 
 const membershipSchema = z.object({
   memberId: z.string().min(1, "Please select a member"),
@@ -98,7 +93,9 @@ export default function MembershipDialog({
   const isEditing = Boolean(membership);
 
   const [open, setOpen] = useState(isEditing);
+  const [search, setSearch] = useState("");
   const [members, setMembers] = useState<GymMember[]>([]);
+  const [selectedMember, setSelectedMember] = useState<GymMember | null>(null);
   const [loadingMembers, setLoadingMembers] = useState(false);
 
   const {
@@ -116,10 +113,6 @@ export default function MembershipDialog({
   const selectedMemberId = watch("memberId");
   const selectedDuration = watch("durationMonths");
 
-  const selectedMember = members.find(
-    (member) => member.id === selectedMemberId,
-  );
-
   useEffect(() => {
     if (membership) {
       const duration = getDuration(membership.startDate, membership.endDate);
@@ -133,9 +126,15 @@ export default function MembershipDialog({
         monthlyFee: Number(membership.monthlyFee),
       });
 
+      setSelectedMember(membership.member);
+      setMembers([membership.member]);
+      setSearch("");
       setOpen(true);
     } else {
       reset(initialValues);
+      setSelectedMember(null);
+      setMembers([]);
+      setSearch("");
       setOpen(false);
     }
   }, [membership, reset]);
@@ -143,35 +142,60 @@ export default function MembershipDialog({
   useEffect(() => {
     if (!open) return;
 
-    async function fetchMembers() {
+    const keyword = search.trim();
+
+    if (keyword.length < 2) {
+      setMembers([]);
+      setLoadingMembers(false);
+      return;
+    }
+
+    const controller = new AbortController();
+
+    const timer = setTimeout(async () => {
       try {
         setLoadingMembers(true);
 
-        const response = await fetch("/api/members", {
-          credentials: "include",
-          cache: "no-store",
-        });
+        const response = await fetch(
+          `/api/members?search=${encodeURIComponent(keyword)}`,
+          {
+            credentials: "include",
+            cache: "no-store",
+            signal: controller.signal,
+          },
+        );
 
         const data = await response.json();
 
         if (!response.ok) {
-          throw new Error(data.message || "Could not fetch members");
+          throw new Error(data.message || "Could not search members");
         }
 
-        const memberList = Array.isArray(data) ? data : (data.members ?? []);
+        const memberList: GymMember[] = Array.isArray(data)
+          ? data
+          : (data.members ?? []);
 
         setMembers(memberList);
       } catch (error) {
+        if (error instanceof Error && error.name === "AbortError") {
+          return;
+        }
+
         toast.error(
-          error instanceof Error ? error.message : "Could not fetch members",
+          error instanceof Error ? error.message : "Could not search members",
         );
       } finally {
-        setLoadingMembers(false);
+        if (!controller.signal.aborted) {
+          setLoadingMembers(false);
+        }
       }
-    }
+    }, 500);
 
-    fetchMembers();
-  }, [open]);
+    return () => {
+      clearTimeout(timer);
+      controller.abort();
+    };
+  }, [search, open]);
 
   function handleOpenChange(value: boolean) {
     if (isSubmitting) return;
@@ -180,6 +204,9 @@ export default function MembershipDialog({
 
     if (!value) {
       reset(initialValues);
+      setSearch("");
+      setMembers([]);
+      setSelectedMember(null);
 
       if (isEditing) {
         onClose?.();
@@ -221,6 +248,9 @@ export default function MembershipDialog({
       );
 
       reset(initialValues);
+      setSearch("");
+      setMembers([]);
+      setSelectedMember(null);
       setOpen(false);
 
       if (isEditing) {
@@ -236,6 +266,16 @@ export default function MembershipDialog({
       );
     }
   }
+
+  const allMembers = [
+    ...(selectedMember ? [selectedMember] : []),
+    ...members.filter((member) => member.id !== selectedMember?.id),
+  ];
+
+  const comboItems = allMembers.map((member) => ({
+    value: member.id,
+    label: `${member.name} - ${member.phone}`,
+  }));
 
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
@@ -267,67 +307,64 @@ export default function MembershipDialog({
           <div className="space-y-2">
             <Label>Member</Label>
 
-            <Popover>
-              <PopoverTrigger>
-                <Button
-                  variant="outline"
-                  role="combobox"
-                  className="w-full justify-between"
-                  disabled={loadingMembers || members.length === 0}
-                >
-                  {selectedMember
-                    ? `${selectedMember.name} - ${selectedMember.phone}`
-                    : "Select a member"}
+            <Combobox
+              items={comboItems}
+              value={selectedMemberId}
+              onValueChange={(value) => {
+                if (typeof value !== "string") return;
 
-                  <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-                </Button>
-              </PopoverTrigger>
+                const member = allMembers.find((item) => item.id === value);
 
-              <PopoverContent className="w-full p-0" align="start">
-                <Command>
-                  <CommandInput placeholder="Search member..." />
+                if (member) {
+                  setSelectedMember(member);
 
-                  <CommandList>
-                    <CommandEmpty>No member found.</CommandEmpty>
+                  setValue("memberId", member.id, {
+                    shouldValidate: true,
+                    shouldDirty: true,
+                  });
+                }
+              }}
+            >
+              <ComboboxInput
+                placeholder="Search by member name or phone number..."
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+              />
 
-                    <CommandGroup>
-                      {members.map((member) => (
-                        <CommandItem
-                          key={member.id}
-                          value={`${member.name} ${member.phone}`}
-                          onSelect={() => {
-                            setValue("memberId", member.id, {
-                              shouldValidate: true,
-                              shouldDirty: true,
-                            });
-                          }}
-                        >
-                          <Check
-                            className={cn(
-                              "mr-2 h-4 w-4",
-                              selectedMemberId === member.id
-                                ? "opacity-100"
-                                : "opacity-0",
-                            )}
-                          />
-                          {member.name} - {member.phone}
-                        </CommandItem>
-                      ))}
-                    </CommandGroup>
-                  </CommandList>
-                </Command>
-              </PopoverContent>
-            </Popover>
+              <ComboboxContent>
+                <ComboboxEmpty>
+                  {loadingMembers
+                    ? "Searching members..."
+                    : search.trim().length < 2
+                      ? "Type at least 2 characters to search."
+                      : "No member found."}
+                </ComboboxEmpty>
+
+                <ComboboxList>
+                  {(item) => (
+                    <ComboboxItem key={item.value} value={item.value}>
+                      {item.label}
+                    </ComboboxItem>
+                  )}
+                </ComboboxList>
+              </ComboboxContent>
+            </Combobox>
+
+            {loadingMembers && (
+              <p className="text-sm text-muted-foreground">
+                Searching members...
+              </p>
+            )}
+
+            {selectedMember && (
+              <p className="text-sm text-green-600">
+                Selected: {selectedMember.name} - {selectedMember.phone}
+              </p>
+            )}
 
             {errors.memberId && (
               <p className="text-sm text-destructive">
                 {errors.memberId.message}
-              </p>
-            )}
-
-            {!loadingMembers && members.length === 0 && (
-              <p className="text-sm text-muted-foreground">
-                No members available. Please add a member first.
               </p>
             )}
           </div>
@@ -413,7 +450,7 @@ export default function MembershipDialog({
 
             <Button
               type="submit"
-              disabled={isSubmitting || loadingMembers || members.length === 0}
+              disabled={isSubmitting || loadingMembers || !selectedMemberId}
             >
               {isSubmitting
                 ? isEditing

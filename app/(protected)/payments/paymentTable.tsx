@@ -37,6 +37,7 @@ export default function PaymentTable({
   const [loading] = useState(false);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [historyOpen, setHistoryOpen] = useState(false);
+  const [historyLoading, setHistoryLoading] = useState(false);
   const [selectedMember, setSelectedMember] = useState<Member | null>(null);
   const [historyPayments, setHistoryPayments] = useState<Payment[]>([]);
 
@@ -44,32 +45,47 @@ export default function PaymentTable({
     setPayments(initialPayments);
   }, [initialPayments]);
 
-  function openHistory(member: Member) {
+  async function openHistory(member: Member) {
     setSelectedMember(member);
+    setHistoryPayments([]);
     setHistoryOpen(true);
-    fetch(`/api/members/${member.id}/payments`, { credentials: "include" })
-      .then((response) => response.json())
-      .then((data) =>
-        setHistoryPayments(
-          data.map(
-            (
-              payment: Omit<Payment, "memberId" | "membershipId" | "member">,
-            ) => ({
-              ...payment,
-              memberId: member.id,
-              membershipId: payment.membership.id,
-              member,
-            }),
-          ),
-        ),
-      )
-      .catch(() => toast.error("Could not load payment history"));
-  }
+    setHistoryLoading(true);
 
-  const uniquePayments = payments.filter(
-    (payment, index, self) =>
-      index === self.findIndex((item) => item.memberId === payment.memberId),
-  );
+    try {
+      const response = await fetch(`/api/members/${member.id}/payments`, {
+        credentials: "include",
+        cache: "no-store",
+      });
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.message || "Could not load payment history");
+      }
+
+      if (!Array.isArray(data)) {
+        throw new Error("Unexpected payment history response");
+      }
+
+      setHistoryPayments(
+        data.map(
+          (
+            payment: Omit<Payment, "memberId" | "membershipId" | "member">,
+          ) => ({
+            ...payment,
+            memberId: member.id,
+            membershipId: payment.membership.id,
+            member,
+          }),
+        ),
+      );
+    } catch (error) {
+      toast.error(
+        error instanceof Error ? error.message : "Could not load payment history",
+      );
+    } finally {
+      setHistoryLoading(false);
+    }
+  }
 
   const memberPayments = historyPayments;
 
@@ -88,6 +104,7 @@ export default function PaymentTable({
           <SearchForm
             initialValue={search}
             placeholder="Search payments by name or phone"
+            debounce={500}
           />
           <Button onClick={() => setDialogOpen(true)}>
             <Plus className="mr-2 h-4 w-4" />
@@ -116,15 +133,15 @@ export default function PaymentTable({
                   Loading payments...
                 </TableCell>
               </TableRow>
-            ) : uniquePayments.length === 0 ? (
+            ) : payments.length === 0 ? (
               <TableRow>
                 <TableCell colSpan={6} className="h-24 text-center">
                   No payments found.
                 </TableCell>
               </TableRow>
             ) : (
-              uniquePayments.map((payment) => (
-                <TableRow key={payment.memberId}>
+              payments.map((payment) => (
+                <TableRow key={payment.id}>
                   <TableCell>
                     <div className="font-medium">{payment.member.name}</div>
 
@@ -183,6 +200,7 @@ export default function PaymentTable({
         onOpenChange={setHistoryOpen}
         member={selectedMember}
         payments={memberPayments}
+        loading={historyLoading}
       />
     </div>
   );

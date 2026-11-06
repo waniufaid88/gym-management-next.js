@@ -6,7 +6,7 @@ import { NextRequest, NextResponse } from "next/server";
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: Promise<{ memberId: string }> },
+  { params }: { params: Promise<{ id: string }> },
 ) {
   const userId = getAuthenticatedUserId(request);
 
@@ -15,7 +15,7 @@ export async function GET(
   }
 
   try {
-    const { memberId } = await params;
+    const { id: memberId } = await params;
 
     const member = await db.query.Member.findFirst({
       where: and(eq(Member.id, memberId), eq(Member.userId, userId)),

@@ -1,62 +1,60 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import { useForm } from "react-hook-form";
-import { Button } from "@/components/ui/button";
-import {
-  InputGroup,
-  InputGroupAddon,
-  InputGroupInput,
-} from "@/components/ui/input-group";
-import { Search } from "lucide-react";
-
-type SearchValues = { search: string };
+import { InputGroup, InputGroupInput } from "@/components/ui/input-group";
 
 type Props = {
   initialValue?: string;
   placeholder: string;
+  debounce?: number;
 };
 
-export function SearchForm({ initialValue = "", placeholder }: Props) {
+export function SearchForm({
+  initialValue = "",
+  placeholder,
+  debounce = 500,
+}: Props) {
+  const [search, setSearch] = useState(initialValue);
+
   const pathname = usePathname();
   const router = useRouter();
   const searchParams = useSearchParams();
 
-  const { register, handleSubmit, reset } = useForm<SearchValues>({
-    defaultValues: { search: initialValue },
-  });
+  useEffect(() => {
+    setSearch(initialValue);
+  }, [initialValue]);
 
   useEffect(() => {
-    reset({ search: initialValue });
-  }, [initialValue, reset]);
+    const timer = setTimeout(() => {
+      const params = new URLSearchParams(searchParams.toString());
 
-  function submitSearch(values: SearchValues) {
-    const params = new URLSearchParams(searchParams.toString());
-    const search = values.search.trim();
+      if (search.trim()) {
+        params.set("search", search.trim());
+      } else {
+        params.delete("search");
+      }
 
-    if (search) params.set("search", search);
-    else params.delete("search");
-    params.delete("page");
+      params.delete("page");
 
-    const query = params.toString();
-    router.push(query ? `${pathname}?${query}` : pathname, { scroll: false });
-  }
+      const query = params.toString();
+
+      router.push(query ? `${pathname}?${query}` : pathname, {
+        scroll: false,
+      });
+    }, debounce);
+
+    return () => clearTimeout(timer);
+  }, [search, debounce, pathname, router, searchParams]);
 
   return (
-    <form onSubmit={handleSubmit(submitSearch)}>
-      <InputGroup className="w-70">
-        <InputGroupInput
-          type="search"
-          placeholder={placeholder}
-          {...register("search")}
-        />
-        <InputGroupAddon align="inline-end">
-          <Button type="submit" variant="secondary" className="cursor-pointer">
-            <Search />
-          </Button>
-        </InputGroupAddon>
-      </InputGroup>
-    </form>
+    <InputGroup className="w-70">
+      <InputGroupInput
+        type="search"
+        placeholder={placeholder}
+        value={search}
+        onChange={(e) => setSearch(e.target.value)}
+      />
+    </InputGroup>
   );
 }

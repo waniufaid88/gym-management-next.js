@@ -154,6 +154,7 @@ export default function MembershipTable({
           <SearchForm
             initialValue={search}
             placeholder="Search memberships by name or phone"
+            debounce={500}
           />
           <MembershipDialog onSuccess={fetchMemberships} />
         </div>

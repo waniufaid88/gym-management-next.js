@@ -190,6 +190,7 @@ export default function MemberTable({
             <SearchForm
               initialValue={search}
               placeholder="Search members by name or phone"
+              debounce={500}
             />
 
             <MemberDialog shifts={shifts} onSaved={fetchMembers} />

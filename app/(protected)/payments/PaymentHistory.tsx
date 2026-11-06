@@ -48,6 +48,7 @@ type MemberPaymentHistoryProps = {
     phone: string;
   } | null;
   payments: Payment[];
+  loading?: boolean;
 };
 
 export default function MemberPaymentHistory({
@@ -55,6 +56,7 @@ export default function MemberPaymentHistory({
   onOpenChange,
   member,
   payments,
+  loading = false,
 }: MemberPaymentHistoryProps) {
   const totalPaid = payments.reduce(
     (total, payment) => total + Number(payment.amount),
@@ -100,7 +102,13 @@ export default function MemberPaymentHistory({
             </TableHeader>
 
             <TableBody>
-              {payments.length === 0 ? (
+              {loading ? (
+                <TableRow>
+                  <TableCell colSpan={5} className="h-24 text-center">
+                    Loading payment history...
+                  </TableCell>
+                </TableRow>
+              ) : payments.length === 0 ? (
                 <TableRow>
                   <TableCell colSpan={5} className="h-24 text-center">
                     No payment history found.

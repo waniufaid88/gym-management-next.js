@@ -23,7 +23,6 @@ type DashboardStats = {
 };
 
 export default function DashboardPage() {
-  const [currentMonth, setCurrentMonth] = useState("");
   const [loading, setLoading] = useState(true);
 
   const [stats, setStats] = useState<DashboardStats>({
@@ -33,15 +32,13 @@ export default function DashboardPage() {
     monthlyRevenue: 0,
   });
 
-  useEffect(() => {
-    setCurrentMonth(
-      new Date().toLocaleDateString("en-IN", {
-        month: "long",
-        year: "numeric",
-      }),
-    );
+  const currentMonth = new Date().toLocaleDateString("en-IN", {
+    month: "long",
+    year: "numeric",
+  });
 
-    const fetchDashboardStats = async () => {
+  useEffect(() => {
+    async function fetchDashboardStats() {
       try {
         const response = await fetch("/api/dashboard", {
           method: "GET",
@@ -51,11 +48,6 @@ export default function DashboardPage() {
         const data = await response.json();
 
         if (!response.ok) {
-          console.error("Dashboard API error:", {
-            status: response.status,
-            response: data,
-          });
-
           throw new Error(
             data.message || "Could not load dashboard statistics",
           );
@@ -71,7 +63,7 @@ export default function DashboardPage() {
       } finally {
         setLoading(false);
       }
-    };
+    }
 
     fetchDashboardStats();
   }, []);
@@ -117,19 +109,19 @@ export default function DashboardPage() {
 
         <Button variant="outline" className="gap-2">
           <CalendarDays className="h-4 w-4" />
-          {currentMonth || "Loading..."}
+          {currentMonth}
         </Button>
       </div>
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-        {dashboardStats.map((s) => {
-          const Icon = s.icon;
+        {dashboardStats.map((item) => {
+          const Icon = item.icon;
 
           return (
-            <Card key={s.title}>
+            <Card key={item.title}>
               <CardContent className="p-5">
                 <div className="flex items-center justify-between">
-                  <p className="text-sm text-muted-foreground">{s.title}</p>
+                  <p className="text-sm text-muted-foreground">{item.title}</p>
 
                   <div className="rounded-lg bg-muted p-2.5">
                     <Icon className="h-5 w-5" />
@@ -137,7 +129,7 @@ export default function DashboardPage() {
                 </div>
 
                 <h2 className="mt-4 text-2xl font-bold">
-                  {loading ? "Loading..." : s.value}
+                  {loading ? "Loading..." : item.value}
                 </h2>
               </CardContent>
             </Card>

@@ -21,21 +21,11 @@ export async function GET(request: NextRequest) {
     });
 
     const today = new Date();
+    const todayDate = today.toISOString().split("T")[0];
 
-    const formatDate = (date: Date) => {
-      const year = date.getFullYear();
-      const month = String(date.getMonth() + 1).padStart(2, "0");
-      const day = String(date.getDate()).padStart(2, "0");
-
-      return `${year}-${month}-${day}`;
-    };
-
-    const todayDate = formatDate(today);
-
-    const sevenDaysLater = new Date(today);
-    sevenDaysLater.setDate(sevenDaysLater.getDate() + 7);
-
-    const expiringDate = formatDate(sevenDaysLater);
+    const nextWeek = new Date(today);
+    nextWeek.setDate(nextWeek.getDate() + 7);
+    const expiringDate = nextWeek.toISOString().split("T")[0];
 
     const totalMembers = members.length;
 
@@ -43,44 +33,32 @@ export async function GET(request: NextRequest) {
       (member) => member.status.toLowerCase() === "active",
     );
 
-    const activeMemberships = activeMembers.reduce((total, member) => {
-      const count = member.memberships.filter(
+    const activeMemberships = activeMembers
+      .flatMap((member) => member.memberships)
+      .filter(
         (membership) =>
           membership.startDate <= todayDate && membership.endDate >= todayDate,
-      ).length;
+      );
 
-      return total + count;
-    }, 0);
+    const expiringSoon = activeMemberships.filter(
+      (membership) => membership.endDate <= expiringDate,
+    ).length;
 
-    const expiringSoon = activeMembers.reduce((total, member) => {
-      const count = member.memberships.filter(
-        (membership) =>
-          membership.startDate <= todayDate &&
-          membership.endDate >= todayDate &&
-          membership.endDate <= expiringDate,
-      ).length;
+    const monthlyRevenue = members
+      .flatMap((member) => member.payments)
+      .filter((payment) => {
+        const paymentDate = new Date(payment.paymentDate);
 
-      return total + count;
-    }, 0);
-
-    const monthlyRevenue = members.reduce((total, member) => {
-      const revenue = member.payments
-        .filter((payment) => {
-          const paymentDate = new Date(payment.paymentDate);
-
-          return (
-            paymentDate.getMonth() === today.getMonth() &&
-            paymentDate.getFullYear() === today.getFullYear()
-          );
-        })
-        .reduce((sum, payment) => sum + Number(payment.amount), 0);
-
-      return total + revenue;
-    }, 0);
+        return (
+          paymentDate.getMonth() === today.getMonth() &&
+          paymentDate.getFullYear() === today.getFullYear()
+        );
+      })
+      .reduce((total, payment) => total + Number(payment.amount), 0);
 
     return NextResponse.json({
       totalMembers,
-      activeMemberships,
+      activeMemberships: activeMemberships.length,
       expiringSoon,
       monthlyRevenue,
     });

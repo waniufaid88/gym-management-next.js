@@ -21,16 +21,22 @@ export function SearchForm({
   const router = useRouter();
   const searchParams = useSearchParams();
 
+  const currentSearchParams = searchParams.toString();
+
   useEffect(() => {
     setSearch(initialValue);
   }, [initialValue]);
 
   useEffect(() => {
     const timer = setTimeout(() => {
-      const params = new URLSearchParams(searchParams.toString());
+      const params = new URLSearchParams(currentSearchParams);
+      const nextSearch = search.trim();
+      const currentSearch = params.get("search")?.trim() ?? "";
 
-      if (search.trim()) {
-        params.set("search", search.trim());
+      if (nextSearch === currentSearch) return;
+
+      if (nextSearch) {
+        params.set("search", nextSearch);
       } else {
         params.delete("search");
       }
@@ -39,13 +45,13 @@ export function SearchForm({
 
       const query = params.toString();
 
-      router.push(query ? `${pathname}?${query}` : pathname, {
+      router.replace(query ? `${pathname}?${query}` : pathname, {
         scroll: false,
       });
     }, debounce);
 
     return () => clearTimeout(timer);
-  }, [search, debounce, pathname, router, searchParams]);
+  }, [search, debounce, pathname, router, currentSearchParams]);
 
   return (
     <InputGroup className="w-70">

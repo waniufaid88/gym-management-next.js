@@ -4,6 +4,8 @@ import { getServerUserId } from "@/lib/server-auth";
 import Pagination from "@/components/pagination";
 import MembershipTable from "./membershipTable";
 
+export const instant = false;
+
 type PageProps = {
   searchParams: Promise<{ page?: string; limit?: string; search?: string }>;
 };

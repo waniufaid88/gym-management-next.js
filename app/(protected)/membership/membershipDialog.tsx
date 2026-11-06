@@ -144,7 +144,7 @@ export default function MembershipDialog({
 
     const keyword = search.trim();
 
-    if (keyword.length < 2) {
+    if (!keyword) {
       setMembers([]);
       setLoadingMembers(false);
       return;
@@ -274,7 +274,7 @@ export default function MembershipDialog({
 
   const comboItems = allMembers.map((member) => ({
     value: member.id,
-    label: `${member.name} - ${member.phone}`,
+    label: member.name,
   }));
 
   return (
@@ -335,8 +335,8 @@ export default function MembershipDialog({
                 <ComboboxEmpty>
                   {loadingMembers
                     ? "Searching members..."
-                    : search.trim().length < 2
-                      ? "Type at least 2 characters to search."
+                    : !search.trim()
+                      ? "Type to search members."
                       : "No member found."}
                 </ComboboxEmpty>
 

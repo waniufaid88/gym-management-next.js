@@ -1,7 +1,7 @@
 import db from "@/db";
 import { Member } from "@/db/schema";
 import { getAuthenticatedUserId } from "@/lib/auth";
-import { desc, eq } from "drizzle-orm";
+import { and, desc, eq, ilike } from "drizzle-orm";
 import { NextRequest, NextResponse } from "next/server";
 
 export async function GET(request: NextRequest) {
@@ -12,8 +12,15 @@ export async function GET(request: NextRequest) {
   }
 
   try {
+    const search = request.nextUrl.searchParams.get("search")?.trim();
+
     const members = await db.query.Member.findMany({
-      where: eq(Member.userId, userId),
+      where: search
+        ? and(
+            eq(Member.userId, userId),
+            ilike(Member.name, `%${search}%`),
+          )
+        : eq(Member.userId, userId),
       with: {
         shift: true,
       },

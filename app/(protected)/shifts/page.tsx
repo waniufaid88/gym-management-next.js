@@ -4,6 +4,8 @@ import { getServerUserId } from "@/lib/server-auth";
 import Pagination from "@/components/pagination";
 import ShiftTable from "./shiftTable";
 
+export const instant = false;
+
 type PageProps = {
   searchParams: Promise<{ page?: string; limit?: string }>;
 };

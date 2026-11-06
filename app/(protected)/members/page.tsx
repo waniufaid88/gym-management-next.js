@@ -6,6 +6,8 @@ import MemberTable from "./memberTable";
 import type { GymMember } from "./memberDialog";
 import PaginationComponent from "@/components/pagination";
 
+export const instant = false;
+
 type PageProps = {
   searchParams: Promise<{
     page?: string;

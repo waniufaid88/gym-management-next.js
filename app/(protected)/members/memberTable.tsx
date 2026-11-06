@@ -177,7 +177,7 @@ export default function MemberTable({
 
   return (
     <>
-      <div className="space-y-6">
+      <div className="space-y-4">
         <div className="flex flex-col justify-between gap-3 sm:flex-row sm:items-center">
           <div>
             <h1 className="text-2xl font-bold tracking-tight">Members</h1>
@@ -197,125 +197,111 @@ export default function MemberTable({
           </div>
         </div>
 
-        <Card>
-          <CardHeader>
-            <CardTitle>Member List</CardTitle>
-          </CardHeader>
+        <div className="overflow-hidden rounded-md border">
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Member Name</TableHead>
+                <TableHead>Phone</TableHead>
+                <TableHead>Gender</TableHead>
+                <TableHead>Age</TableHead>
+                <TableHead>Shift</TableHead>
+                <TableHead>Status</TableHead>
+                <TableHead>Joined Date</TableHead>
+                <TableHead className="text-right">Actions</TableHead>
+              </TableRow>
+            </TableHeader>
 
-          <CardContent>
-            <div className="overflow-x-auto">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Member Name</TableHead>
-                    <TableHead>Phone</TableHead>
-                    <TableHead>Gender</TableHead>
-                    <TableHead>Age</TableHead>
-                    <TableHead>Shift</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead>Joined Date</TableHead>
-                    <TableHead className="text-right">Actions</TableHead>
-                  </TableRow>
-                </TableHeader>
+            <TableBody>
+              {members.length > 0 ? (
+                members.map((member) => (
+                  <TableRow key={member.id}>
+                    <TableCell className="font-medium">{member.name}</TableCell>
 
-                <TableBody>
-                  {members.length > 0 ? (
-                    members.map((member) => (
-                      <TableRow key={member.id}>
-                        <TableCell className="font-medium">
-                          {member.name}
-                        </TableCell>
+                    <TableCell>{member.phone}</TableCell>
 
-                        <TableCell>{member.phone}</TableCell>
+                    <TableCell>{member.gender}</TableCell>
 
-                        <TableCell>{member.gender}</TableCell>
+                    <TableCell>{calculateAge(member.dob)}</TableCell>
 
-                        <TableCell>{calculateAge(member.dob)}</TableCell>
+                    <TableCell>
+                      {member.shift ? (
+                        <Badge variant="secondary">
+                          {formatTime(member.shift.startTime)} -{" "}
+                          {formatTime(member.shift.endTime)}
+                        </Badge>
+                      ) : (
+                        <span className="text-muted-foreground">No shift</span>
+                      )}
+                    </TableCell>
 
-                        <TableCell>
-                          {member.shift ? (
-                            <Badge variant="secondary">
-                              {formatTime(member.shift.startTime)} -{" "}
-                              {formatTime(member.shift.endTime)}
-                            </Badge>
-                          ) : (
-                            <span className="text-muted-foreground">
-                              No shift
-                            </span>
-                          )}
-                        </TableCell>
-
-                        <TableCell>
-                          <Badge
-                            variant={
-                              member.status === "active"
-                                ? "default"
-                                : "secondary"
-                            }
-                          >
-                            {member.status === "active" ? "Active" : "Inactive"}
-                          </Badge>
-                        </TableCell>
-
-                        <TableCell>{formatDate(member.created_at)}</TableCell>
-
-                        <TableCell>
-                          <div className="flex items-center justify-end gap-1">
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              title="Edit member"
-                              onClick={() => setEditingMember(member)}
-                            >
-                              <Pencil className="h-4 w-4" />
-                            </Button>
-
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              title={
-                                member.status === "active"
-                                  ? "Deactivate member"
-                                  : "Activate member"
-                              }
-                              disabled={updatingStatusId !== null}
-                              onClick={() => toggleMemberStatus(member)}
-                            >
-                              {member.status === "active" ? (
-                                <UserCheck className="h-4 w-4 text-green-600" />
-                              ) : (
-                                <UserX className="h-4 w-4 text-destructive" />
-                              )}
-                            </Button>
-
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              title="Delete member"
-                              disabled={deletingId === member.id}
-                              onClick={() => setDeletingMember(member)}
-                            >
-                              <Trash2 className="h-4 w-4 text-destructive" />
-                            </Button>
-                          </div>
-                        </TableCell>
-                      </TableRow>
-                    ))
-                  ) : (
-                    <TableRow>
-                      <TableCell
-                        colSpan={8}
-                        className="h-24 text-center text-muted-foreground"
+                    <TableCell>
+                      <Badge
+                        variant={
+                          member.status === "active" ? "default" : "secondary"
+                        }
                       >
-                        No members added yet.
-                      </TableCell>
-                    </TableRow>
-                  )}
-                </TableBody>
-              </Table>
-            </div>
-          </CardContent>
-        </Card>
+                        {member.status === "active" ? "Active" : "Inactive"}
+                      </Badge>
+                    </TableCell>
+
+                    <TableCell>{formatDate(member.created_at)}</TableCell>
+
+                    <TableCell>
+                      <div className="flex items-center justify-end gap-1">
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          title="Edit member"
+                          onClick={() => setEditingMember(member)}
+                        >
+                          <Pencil className="h-4 w-4" />
+                        </Button>
+
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          title={
+                            member.status === "active"
+                              ? "Deactivate member"
+                              : "Activate member"
+                          }
+                          disabled={updatingStatusId !== null}
+                          onClick={() => toggleMemberStatus(member)}
+                        >
+                          {member.status === "active" ? (
+                            <UserCheck className="h-4 w-4 text-green-600" />
+                          ) : (
+                            <UserX className="h-4 w-4 text-destructive" />
+                          )}
+                        </Button>
+
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          title="Delete member"
+                          disabled={deletingId === member.id}
+                          onClick={() => setDeletingMember(member)}
+                        >
+                          <Trash2 className="h-4 w-4 text-destructive" />
+                        </Button>
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                ))
+              ) : (
+                <TableRow>
+                  <TableCell
+                    colSpan={8}
+                    className="h-24 text-center text-muted-foreground"
+                  >
+                    No members added yet.
+                  </TableCell>
+                </TableRow>
+              )}
+            </TableBody>
+          </Table>
+        </div>
       </div>
 
       {editingMember && (

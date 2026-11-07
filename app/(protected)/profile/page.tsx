@@ -2,6 +2,8 @@ import { redirect } from "next/navigation";
 import { getCurrentUser } from "@/lib/auth";
 import UserProfile from "./userProfile";
 
+export const instant = false;
+
 export default async function ProfilePage() {
   const currentUser = await getCurrentUser();
 

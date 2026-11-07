@@ -1,7 +1,7 @@
 import "server-only";
 
 import jwt from "jsonwebtoken";
-import type { NextRequest } from "next/server";
+import { connection, type NextRequest } from "next/server";
 import { cookies } from "next/headers";
 
 import db from "@/db";
@@ -31,6 +31,8 @@ export function getAuthenticatedUserId(request: NextRequest): string | null {
 }
 
 export async function getCurrentUser() {
+  await connection();
+
   const cookieStore = await cookies();
   const token = cookieStore.get("accessToken")?.value;
 

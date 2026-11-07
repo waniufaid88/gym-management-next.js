@@ -1,6 +1,5 @@
 import { Suspense, type ReactNode } from "react";
 import { redirect } from "next/navigation";
-import { connection } from "next/server";
 
 import {
   SidebarProvider,
@@ -26,8 +25,6 @@ export default function ProtectedLayout({ children }: { children: ReactNode }) {
 }
 
 async function Layout({ children }: { children: ReactNode }) {
-  await connection();
-
   const currentUser = await getCurrentUser();
 
   if (!currentUser) {

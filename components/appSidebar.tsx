@@ -1,7 +1,6 @@
 "use client";
 
 import Link from "next/link";
-import { useState } from "react";
 import { usePathname } from "next/navigation";
 import {
   CalendarDays,
@@ -25,15 +24,6 @@ import {
   SidebarMenuButton,
   SidebarMenuItem,
 } from "@/components/ui/sidebar";
-
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
 
 import {
   DropdownMenu,
@@ -61,7 +51,6 @@ const links = [
 
 export default function AppSidebar({ userName, userEmail }: SidebarProps) {
   const pathname = usePathname();
-  const [profileOpen, setProfileOpen] = useState(false);
 
   return (
     <>
@@ -147,12 +136,12 @@ export default function AppSidebar({ userName, userEmail }: SidebarProps) {
               </span>
             </DropdownMenuTrigger>
 
-            <DropdownMenuContent side="right" align="end" className="w-56">
+            <DropdownMenuContent className="w-60">
               <DropdownMenuGroup>
                 <DropdownMenuLabel>My Account</DropdownMenuLabel>
               </DropdownMenuGroup>
 
-              <DropdownMenuItem onClick={() => setProfileOpen(true)}>
+              <DropdownMenuItem render={<Link href="/profile" />}>
                 <CircleUserRound className="mr-2 h-4 w-4" />
                 Profile
               </DropdownMenuItem>
@@ -164,31 +153,6 @@ export default function AppSidebar({ userName, userEmail }: SidebarProps) {
           </DropdownMenu>
         </SidebarFooter>
       </Sidebar>
-
-      <Dialog open={profileOpen} onOpenChange={setProfileOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Profile</DialogTitle>
-            <DialogDescription>Your account details.</DialogDescription>
-          </DialogHeader>
-
-          <dl className="space-y-4 text-sm">
-            <div>
-              <dt className="font-medium text-muted-foreground">Name</dt>
-              <dd>{userName}</dd>
-            </div>
-
-            <div>
-              <dt className="font-medium text-muted-foreground">Email</dt>
-              <dd>{userEmail}</dd>
-            </div>
-          </dl>
-
-          <DialogFooter>
-            <LogoutButton />
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
     </>
   );
 }

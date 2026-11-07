@@ -44,7 +44,7 @@ const memberSchema = z.object({
   phone: z
     .string()
     .trim()
-    .regex(/^\+?[0-9]{7,15}$/, "Enter a valid phone number"),
+    .regex(/^[0-9]{10}$/, "Phone number must be exactly 10 digits"),
   address: z.string().trim().min(3, "Please enter an address"),
   dob: z.string().min(1, "Date of birth is required"),
   gender: z.enum(["Male", "Female", "Other"], {
